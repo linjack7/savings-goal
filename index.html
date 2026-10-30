@@ -1,0 +1,2579 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f5f6f8">
+<title>储蓄目标 · 攒钱计算与追踪</title>
+<script>
+(function () {
+  try {
+    var raw = localStorage.getItem('savingsGoalTracker.v1');
+    var theme = null;
+    if (raw) {
+      var s = JSON.parse(raw);
+      if (s && s.settings && (s.settings.theme === 'dark' || s.settings.theme === 'light')) theme = s.settings.theme;
+    }
+    if (!theme) theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+<style>
+/* ---------- design tokens ---------- */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef1f4;
+  --text: #1b2129;
+  --muted: #5f6b7a;
+  --border: #e2e7ec;
+  --accent: #0f766e;
+  --accent-strong: #115e59;
+  --accent-soft: #e4f2f0;
+  --positive: #0f8a5f;
+  --negative: #c0392b;
+  --warning: #b45309;
+  --chart-grid: #e8ebef;
+  --chart-axis: #8792a2;
+  --chart-target: #b45309;
+  --chart-checkin: #6d28d9;
+  --chart-cross: #9aa6b4;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 28px rgba(16, 24, 40, .07);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, .06);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --maxw: 1180px;
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #1d242d;
+  --text: #e6edf3;
+  --muted: #9aa7b4;
+  --border: #2a323c;
+  --accent: #2dd4bf;
+  --accent-strong: #5eead4;
+  --accent-soft: #123230;
+  --positive: #3fb950;
+  --negative: #f85149;
+  --warning: #d29922;
+  --chart-grid: #232b35;
+  --chart-axis: #7d8896;
+  --chart-target: #d29922;
+  --chart-checkin: #a78bfa;
+  --chart-cross: #566171;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 12px 32px rgba(0, 0, 0, .38);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
+  color-scheme: dark;
+}
+/* ---------- base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  transition: background-color .18s ease, color .18s ease;
+}
+h1, h2, h3, p, dl, dd, dt, ul { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+a { color: var(--accent); }
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--surface); padding: 10px 16px; border-radius: 0 0 10px 0;
+}
+.skip-link:focus { left: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+/* ---------- header ---------- */
+.app-header {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.header-inner {
+  max-width: var(--maxw); margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-mark { width: 34px; height: 34px; flex: none; color: var(--accent); }
+.brand h1 { font-size: 1.08rem; font-weight: 700; letter-spacing: .01em; }
+.brand-sub { font-size: .78rem; color: var(--muted); }
+/* ---------- layout ---------- */
+.container { max-width: var(--maxw); margin: 0 auto; padding: 24px 20px 72px; }
+.grid-hero { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 18px; margin-bottom: 18px; }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 18px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+.panel { display: flex; flex-direction: column; gap: 18px; }
+/* ---------- cards ---------- */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); padding: 20px; min-width: 0;
+}
+.hero-card { padding: 24px; }
+.card h2 { font-size: 1.02rem; font-weight: 700; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.eyebrow { font-size: .76rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.big-number { font-size: clamp(2rem, 5.4vw, 3.1rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.12; font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: .82rem; }
+.hint { font-size: .85rem; color: var(--warning); margin-top: 12px; }
+.footnote { font-size: .78rem; color: var(--muted); margin-top: 10px; }
+/* ---------- onboarding ---------- */
+.onboarding { display: flex; justify-content: center; padding: 6vh 0; }
+.onboard-card { max-width: 640px; width: 100%; padding: 36px; }
+.onboard-card h2 { font-size: clamp(1.5rem, 3.4vw, 2rem); margin-bottom: 10px; letter-spacing: -.01em; }
+.onboard-card > p.muted { margin-bottom: 22px; }
+.feature-list { display: flex; gap: 20px; list-style: none; padding: 0; margin-top: 26px; color: var(--muted); font-size: .86rem; flex-wrap: wrap; }
+.feature-list li::before { content: "✓"; color: var(--accent); margin-right: 6px; font-weight: 700; }
+/* ---------- tabs ---------- */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  appearance: none; background: none; border: 0; border-bottom: 2px solid transparent;
+  padding: 10px 16px; margin-bottom: -1px; font-weight: 600; color: var(--muted);
+  cursor: pointer; white-space: nowrap; border-radius: 8px 8px 0 0;
+}
+.tab:hover { color: var(--text); background: var(--surface-2); }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+/* ---------- buttons ---------- */
+.btn {
+  appearance: none; cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); padding: 9px 16px; border-radius: 10px; font-weight: 600; font-size: .92rem;
+  min-height: 40px; transition: background-color .12s ease, border-color .12s ease;
+}
+.btn:hover { background: var(--surface-2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+[data-theme="dark"] .btn-primary { color: #052e2b; }
+.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn-danger { background: var(--negative); border-color: var(--negative); color: #fff; }
+.btn-danger:hover { filter: brightness(.94); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.icon-btn {
+  appearance: none; cursor: pointer; width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface); display: grid; place-items: center;
+}
+.icon-btn:hover { background: var(--surface-2); }
+.icon-btn svg { width: 20px; height: 20px; }
+.link-btn {
+  appearance: none; background: none; border: 0; padding: 2px 4px; cursor: pointer;
+  color: var(--accent); font-weight: 600; font-size: .86rem; border-radius: 6px;
+}
+.link-btn:hover { text-decoration: underline; }
+.link-btn.danger { color: var(--negative); }
+/* ---------- status / badge ---------- */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  font-size: .78rem; font-weight: 700; background: var(--accent-soft); color: var(--accent);
+}
+.badge.warn { background: color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
+.badge.neutral { background: var(--surface-2); color: var(--muted); }
+.status-list { display: flex; flex-direction: column; gap: 16px; margin: 20px 0 14px; }
+.status-list dt { font-size: .78rem; color: var(--muted); margin-bottom: 2px; }
+.status-list dd { font-size: 1.16rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* ---------- progress ---------- */
+.progress { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+.progress-bar { flex: 1; height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.progress-bar span { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-strong)); transition: width .4s ease; }
+.progress-label { font-size: .86rem; font-weight: 700; color: var(--muted); min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+.today-status { margin-top: 10px; font-size: .88rem; color: var(--muted); }
+/* ---------- stats ---------- */
+.stat-label { font-size: .78rem; color: var(--muted); margin-bottom: 6px; }
+.stat-value { font-size: 1.22rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.stat-sub { font-size: .76rem; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.positive { color: var(--positive); }
+.negative { color: var(--negative); }
+/* ---------- forms ---------- */
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.field > span, .field > label { font-size: .84rem; font-weight: 600; color: var(--muted); }
+.field input {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); min-height: 42px;
+}
+.field input:focus { border-color: var(--accent); }
+.field .field-hint { font-size: .76rem; color: var(--muted); }
+.form-error {
+  margin-top: 12px; padding: 9px 12px; border-radius: 10px; font-size: .86rem;
+  background: color-mix(in srgb, var(--negative) 12%, transparent); color: var(--negative);
+}
+.form-hint { font-size: .8rem; color: var(--warning); margin-top: 10px; }
+/* ---------- tables ---------- */
+.table-scroll { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.data-table th, .data-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table th { font-size: .76rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.data-table tr:last-child td { border-bottom: 0; }
+.data-table .num { font-variant-numeric: tabular-nums; }
+.data-table tr.baseline-row td { background: var(--accent-soft); }
+.data-table tr.baseline-row td:first-child { border-radius: 10px 0 0 10px; }
+.data-table tr.baseline-row td:last-child { border-radius: 0 10px 10px 0; }
+.color-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+.pager { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; font-size: .84rem; color: var(--muted); }
+.empty-note { padding: 26px 8px; text-align: center; color: var(--muted); font-size: .9rem; }
+/* ---------- chart ---------- */
+.chart-card { padding-bottom: 16px; }
+.chart-wrap { position: relative; width: 100%; min-height: 120px; touch-action: pan-y; }
+.chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart-empty { padding: 30px 8px; text-align: center; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-swatch { width: 18px; height: 0; border-top: 2px solid currentColor; display: inline-block; }
+.legend-swatch.dashed { border-top-style: dashed; }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.grid-line { stroke: var(--chart-grid); stroke-width: 1; }
+.axis-label { fill: var(--chart-axis); font-size: 11px; font-variant-numeric: tabular-nums; }
+.series-line { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.series-baseline { stroke: var(--accent); }
+.series-projection { stroke-dasharray: 6 5; }
+.target-line { stroke: var(--chart-target); stroke-width: 1.4; stroke-dasharray: 3 5; }
+.target-label {
+  fill: var(--chart-target); font-size: 11px; font-weight: 700;
+  paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round;
+}
+.checkin-dot { fill: var(--surface); stroke: var(--chart-checkin); stroke-width: 2; }
+.checkin-ring { fill: none; stroke: var(--chart-checkin); stroke-width: 1.4; opacity: .55; }
+.hover-cross { stroke: var(--chart-cross); stroke-width: 1; stroke-dasharray: 3 3; }
+.hover-dot { stroke: var(--surface); stroke-width: 1.6; }
+.chart-tooltip {
+  position: absolute; z-index: 5; pointer-events: none; min-width: 150px; max-width: 240px;
+  max-height: 240px; overflow: auto; background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow);
+  padding: 9px 11px; font-size: .78rem;
+}
+.chart-tooltip .tt-date { font-weight: 700; margin-bottom: 6px; }
+.chart-tooltip .tt-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 0; }
+.chart-tooltip .tt-name { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.chart-tooltip .tt-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+/* ---------- dialogs ---------- */
+dialog {
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);
+  padding: 22px; width: min(480px, calc(100vw - 32px)); box-shadow: var(--shadow);
+}
+dialog::backdrop { background: rgba(10, 14, 20, .48); backdrop-filter: blur(2px); }
+dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.mono-body { white-space: pre-line; font-size: .88rem; color: var(--muted); margin-top: 8px; }
+.color-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.color-option { position: relative; }
+.color-option input { position: absolute; opacity: 0; pointer-events: none; }
+.color-option span {
+  display: block; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+  border: 3px solid transparent; box-shadow: inset 0 0 0 2px var(--surface);
+}
+.color-option input:checked + span { border-color: var(--text); }
+.color-option input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* ---------- banner / toast ---------- */
+.banner {
+  padding: 11px 14px; border-radius: 12px; margin-bottom: 16px; font-size: .88rem;
+  background: color-mix(in srgb, var(--warning) 14%, var(--surface)); color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border));
+}
+#toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 12px); z-index: 60;
+  background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px;
+  font-size: .86rem; font-weight: 600; opacity: 0; pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease; max-width: calc(100vw - 40px);
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+/* ---------- reverse ---------- */
+.reverse-result { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); }
+.reverse-big { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.reverse-sub { font-size: .86rem; color: var(--muted); margin-top: 6px; }
+/* ---------- responsive ---------- */
+@media (max-width: 980px) {
+  .grid-hero, .grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .container { padding: 18px 14px 64px; }
+  .header-inner { padding: 10px 14px; }
+  .brand-sub { display: none; }
+  .card { padding: 16px; }
+  .hero-card, .onboard-card { padding: 20px; }
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .data-table thead { display: none; }
+  .data-table tr { display: block; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; padding: 8px 12px; }
+  .data-table td { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; padding: 5px 0; white-space: normal; }
+  .data-table td::before { content: attr(data-label); color: var(--muted); font-size: .78rem; flex: none; }
+  .data-table tr.baseline-row td { background: none; }
+  .data-table tr.baseline-row { background: var(--accent-soft); }
+  .btn-row .btn { flex: 1; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="2.4"/>
+        <path d="M12 25.5l5.2-6.2 4 3.6L28 15" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M24.6 15H28v3.4" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>储蓄目标</h1>
+        <p class="brand-sub">把每一天，变成更近的一步</p>
+      </div>
+    </div>
+    <button id="btn-theme" class="icon-btn" type="button" aria-label="切换到深色模式">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" id="icon-theme">
+        <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main id="main" class="container">
+  <div id="app-banner" class="banner" hidden role="status"></div>
+
+  <section id="view-onboarding" class="onboarding" hidden>
+    <div class="card hero-card onboard-card">
+      <p class="eyebrow">开始</p>
+      <h2>从一个清晰的目标开始</h2>
+      <p class="muted">输入目标金额、当前本金、每日投入和预期年化收益率，看看还要多久能攒到。之后可以每天记录投入、定期核对市值，让预测越来越贴近现实。</p>
+      <div class="btn-row">
+        <button id="btn-create-goal" class="btn btn-primary" type="button">创建储蓄目标</button>
+        <button id="btn-import-onboarding" class="btn" type="button">导入已有备份</button>
+      </div>
+      <ul class="feature-list">
+        <li>每日记录</li>
+        <li>市值核对</li>
+        <li>方案对比</li>
+      </ul>
+    </div>
+  </section>
+
+  <div id="app-shell" hidden>
+    <nav class="tabs" role="tablist" aria-label="主导航">
+      <button class="tab" role="tab" id="tab-dashboard" aria-controls="panel-dashboard" aria-selected="true" data-tab="dashboard" type="button">仪表盘</button>
+      <button class="tab" role="tab" id="tab-records" aria-controls="panel-records" aria-selected="false" tabindex="-1" data-tab="records" type="button">投入记录</button>
+      <button class="tab" role="tab" id="tab-compare" aria-controls="panel-compare" aria-selected="false" tabindex="-1" data-tab="compare" type="button">方案对比</button>
+      <button class="tab" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1" data-tab="settings" type="button">设置</button>
+    </nav>
+
+    <section id="panel-dashboard" class="panel" role="tabpanel" aria-labelledby="tab-dashboard">
+      <div class="grid-hero">
+        <article class="card hero-card">
+          <p class="eyebrow">推算余额</p>
+          <p class="big-number" id="dash-balance">—</p>
+          <p class="muted small" id="dash-balance-exact"></p>
+          <p class="today-status" id="dash-today-status"></p>
+          <div class="progress">
+            <div class="progress-bar" aria-hidden="true"><span id="dash-progress-fill"></span></div>
+            <span class="progress-label" id="dash-progress-label">0%</span>
+          </div>
+          <div class="btn-row">
+            <button id="btn-record-today" class="btn btn-primary" type="button">记录今日投入</button>
+            <button id="btn-checkin-today" class="btn" type="button">市值核对</button>
+          </div>
+        </article>
+        <article class="card status-card">
+          <span class="badge" id="dash-status-badge">进行中</span>
+          <dl class="status-list">
+            <div>
+              <dt>预计达成</dt>
+              <dd id="dash-target-date">—</dd>
+            </div>
+            <div>
+              <dt>剩余时间</dt>
+              <dd id="dash-remaining">—</dd>
+            </div>
+          </dl>
+          <p class="muted small" id="dash-remaining-sub"></p>
+          <p class="muted small" id="dash-assumption"></p>
+          <p class="hint" id="dash-hint" hidden></p>
+        </article>
+      </div>
+
+      <div class="stat-grid">
+        <article class="card stat">
+          <p class="stat-label">目标金额</p>
+          <p class="stat-value" id="stat-target">—</p>
+          <p class="stat-sub" id="stat-target-sub"></p>
+        </article>
+        <article class="card stat">
+          <p class="stat-label">累计投入（含本金）</p>
+          <p class="stat-value" id="stat-invested">—</p>
+          <p class="stat-sub" id="stat-invested-sub"></p>
+        </article>
+        <article class="card stat">
+          <p class="stat-label">累计收益</p>
+          <p class="stat-value" id="stat-growth">—</p>
+          <p class="stat-sub" id="stat-growth-sub"></p>
+        </article>
+        <article class="card stat">
+          <p class="stat-label">最近市值核对</p>
+          <p class="stat-value" id="stat-checkin">尚无核对</p>
+          <p class="stat-sub" id="stat-checkin-sub">当前为模型推算</p>
+        </article>
+      </div>
+
+      <article class="card chart-card">
+        <div class="card-head">
+          <h2>余额轨迹</h2>
+          <div class="legend">
+            <span class="legend-item" style="color: var(--accent)"><i class="legend-swatch"></i>历史</span>
+            <span class="legend-item" style="color: var(--accent)"><i class="legend-swatch dashed"></i>预测</span>
+            <span class="legend-item" style="color: var(--chart-target)"><i class="legend-swatch dashed"></i>目标</span>
+            <span class="legend-item" style="color: var(--chart-checkin)"><i class="legend-dot" style="background: var(--chart-checkin)"></i>市值核对</span>
+          </div>
+        </div>
+        <div class="chart-wrap" id="chart-main"></div>
+        <p class="footnote">按 365 天/年折算日收益率；投入按日末计入；预测不含税费、通胀与手续费。</p>
+        <p class="footnote" id="chart-main-note"></p>
+      </article>
+    </section>
+
+    <section id="panel-records" class="panel" role="tabpanel" aria-labelledby="tab-records" hidden>
+      <div class="grid-2">
+        <article class="card">
+          <div class="card-head">
+            <h2>投入记录</h2>
+            <div class="btn-row" style="margin-top:0">
+              <button id="btn-add-record" class="btn" type="button">记录今天</button>
+              <button id="btn-backfill-record" class="btn" type="button">补记</button>
+            </div>
+          </div>
+          <p class="muted small" id="records-summary"></p>
+          <div id="records-table-wrap"></div>
+          <div class="pager" id="records-pager"></div>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <h2>市值核对</h2>
+            <button id="btn-add-checkin" class="btn" type="button">添加核对</button>
+          </div>
+          <p class="muted small">最新一次核对会覆盖当日推算余额，并作为之后推算的起点。</p>
+          <div id="checkins-list"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="panel-compare" class="panel" role="tabpanel" aria-labelledby="tab-compare" hidden>
+      <article class="card">
+        <div class="card-head">
+          <h2>方案对比</h2>
+          <button id="btn-add-plan" class="btn" type="button">新增方案</button>
+        </div>
+        <p class="muted small">方案是假设，不会被记录；用于比较不同日投和收益率。修改目标或记录会同步影响所有方案。</p>
+        <div id="plans-table-wrap"></div>
+      </article>
+      <article class="card chart-card">
+        <div class="card-head">
+          <h2>预测曲线叠加</h2>
+          <div class="legend" id="compare-legend"></div>
+        </div>
+        <div class="chart-wrap" id="chart-compare"></div>
+      </article>
+      <article class="card">
+        <h2>反推模式</h2>
+        <p class="muted small">给定目标日期，算算每天需要投入多少。以今日推算余额为本金。</p>
+        <form id="reverse-form" class="form-grid" novalidate>
+          <label class="field"><span>目标日期</span><input type="date" id="reverse-date"></label>
+          <label class="field"><span>目标金额</span><input type="text" inputmode="decimal" id="reverse-target" autocomplete="off" placeholder="例如 1000000"></label>
+        </form>
+        <div class="reverse-result" id="reverse-result"></div>
+      </article>
+    </section>
+
+    <section id="panel-settings" class="panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <article class="card">
+        <div class="card-head">
+          <h2>目标设置</h2>
+          <button id="btn-edit-goal" class="btn" type="button">编辑目标</button>
+        </div>
+        <dl id="settings-goal-summary" class="status-list" style="margin:0"></dl>
+      </article>
+      <article class="card">
+        <h2>数据管理</h2>
+        <p class="muted small" style="margin-top:6px">数据只保存在当前浏览器的本地存储中。换浏览器或换设备前，请先导出备份。</p>
+        <div class="btn-row">
+          <button id="btn-export" class="btn" type="button">导出备份</button>
+          <button id="btn-import" class="btn" type="button">导入备份</button>
+          <button id="btn-clear" class="btn btn-danger" type="button">清空全部数据</button>
+        </div>
+        <input type="file" id="file-import" accept=".json,application/json" hidden>
+      </article>
+      <article class="card">
+        <h2>外观</h2>
+        <div class="btn-row">
+          <button id="btn-theme-2" class="btn" type="button">切换深浅色</button>
+        </div>
+      </article>
+      <article class="card">
+        <h2>计算口径</h2>
+        <ul class="muted small" style="padding-left:18px;margin-top:8px;line-height:1.8">
+          <li>年化收益率按 365 天折算为日收益率：(1 + 年化)^(1/365) − 1。</li>
+          <li>每日先计息、再计入当日投入；当天投入从次日起产生收益。</li>
+          <li>今日的计划日投不计入预测，除非今天已有投入记录。</li>
+          <li>市值核对为当日结束后真实市值，会覆盖当日推算值。</li>
+          <li>预测不含税费、通胀与手续费。</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>关于</h2>
+        <p class="muted small" id="about-schema" style="margin-top:6px"></p>
+      </article>
+    </section>
+  </div>
+</main>
+
+<!-- goal dialog -->
+<dialog id="dlg-goal" aria-labelledby="dlg-goal-title">
+  <form id="form-goal" novalidate>
+    <h2 id="dlg-goal-title">创建储蓄目标</h2>
+    <p class="muted small">所有金额单位为元。</p>
+    <label class="field"><span>目标金额</span><input type="text" id="g-target" inputmode="decimal" autocomplete="off" placeholder="例如 1000000"></label>
+    <label class="field"><span>当前本金</span><input type="text" id="g-principal" inputmode="decimal" autocomplete="off" placeholder="例如 100000"></label>
+    <label class="field"><span>开始日期</span><input type="date" id="g-start"></label>
+    <label class="field"><span>每日投入</span><input type="text" id="g-daily" inputmode="decimal" autocomplete="off" placeholder="例如 100"></label>
+    <label class="field"><span>年化收益率（%）</span><input type="text" id="g-rate" inputmode="decimal" autocomplete="off" placeholder="例如 8"></label>
+    <p class="form-error" id="g-error" role="alert" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close="dlg-goal">取消</button>
+      <button type="submit" class="btn btn-primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- record dialog -->
+<dialog id="dlg-record" aria-labelledby="dlg-record-title">
+  <form id="form-record" novalidate>
+    <h2 id="dlg-record-title">记录投入</h2>
+    <label class="field"><span>日期</span><input type="date" id="r-date"></label>
+    <label class="field"><span>投入金额</span><input type="text" id="r-amount" inputmode="decimal" autocomplete="off" placeholder="例如 100"></label>
+    <p class="form-error" id="r-error" role="alert" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close="dlg-record">取消</button>
+      <button type="submit" class="btn btn-primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- check-in dialog -->
+<dialog id="dlg-checkin" aria-labelledby="dlg-checkin-title">
+  <form id="form-checkin" novalidate>
+    <h2 id="dlg-checkin-title">市值核对</h2>
+    <p class="muted small">输入该日结束后账户的真实市值。最新一次核对将是之后推算的起点。</p>
+    <label class="field"><span>日期</span><input type="date" id="c-date"></label>
+    <label class="field"><span>实际市值</span><input type="text" id="c-value" inputmode="decimal" autocomplete="off" placeholder="例如 105000"></label>
+    <p class="form-hint" id="c-overlap" hidden></p>
+    <p class="form-error" id="c-error" role="alert" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close="dlg-checkin">取消</button>
+      <button type="submit" class="btn btn-primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- plan dialog -->
+<dialog id="dlg-plan" aria-labelledby="dlg-plan-title">
+  <form id="form-plan" novalidate>
+    <h2 id="dlg-plan-title">新增方案</h2>
+    <label class="field"><span>方案名称</span><input type="text" id="p-name" autocomplete="off" maxlength="40" placeholder="例如 稳健方案"></label>
+    <label class="field"><span>每日投入</span><input type="text" id="p-daily" inputmode="decimal" autocomplete="off" placeholder="例如 200"></label>
+    <label class="field"><span>年化收益率（%）</span><input type="text" id="p-rate" inputmode="decimal" autocomplete="off" placeholder="例如 6"></label>
+    <div class="field"><span>颜色</span><div class="color-row" id="p-colors"></div></div>
+    <p class="form-error" id="p-error" role="alert" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close="dlg-plan">取消</button>
+      <button type="submit" class="btn btn-primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- confirm dialog -->
+<dialog id="dlg-confirm" aria-labelledby="confirm-title">
+  <h2 id="confirm-title">确认</h2>
+  <p class="mono-body" id="confirm-body"></p>
+  <div class="dialog-actions">
+    <button id="confirm-cancel" class="btn" type="button">取消</button>
+    <button id="confirm-ok" class="btn btn-primary" type="button">确定</button>
+  </div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:20px">本应用需要启用 JavaScript。</p></noscript>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+   * 1. constants
+   * ============================================================ */
+  var STORAGE_KEY = 'savingsGoalTracker.v1';
+  var CORRUPT_KEY = STORAGE_KEY + '.corrupt';
+  var SCHEMA_VERSION = 1;
+  var MAX_DAYS = 36525;
+  var MS_DAY = 86400000;
+  var PAGE_SIZE = 50;
+  var MAX_PLANS = 20;
+  var PALETTE = ['#2F6FED', '#D97706', '#8B5CF6', '#DB2777', '#0891B2', '#65A30D', '#EA580C', '#475569'];
+
+  var app = {
+    state: null,
+    derived: null,
+    today: todayKey(),
+    activeTab: 'dashboard',
+    ui: {
+      editingGoal: false,
+      editingRecordDate: null,
+      editingCheckInDate: null,
+      editingPlanId: null,
+      recordPage: 0
+    },
+    storageOk: true,
+    chartModels: { main: null, compare: null }
+  };
+
+  /* ============================================================
+   * 2. helpers: DOM, date, number, format
+   * ============================================================ */
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+  function h(tag, props) {
+    var node = document.createElement(tag);
+    var kids = Array.prototype.slice.call(arguments, 2);
+    if (props) {
+      Object.keys(props).forEach(function (k) {
+        var v = props[k];
+        if (v == null || v === false) return;
+        if (k === 'class') node.className = v;
+        else if (k === 'text') node.textContent = v;
+        else if (k === 'html') return; /* never used */
+        else if (k.indexOf('on') === 0 && typeof v === 'function') node.addEventListener(k.slice(2), v);
+        else if (k === 'style') node.setAttribute('style', v);
+        else node.setAttribute(k, v === true ? '' : String(v));
+      });
+    }
+    kids.forEach(function (kid) {
+      if (kid == null || kid === false) return;
+      if (Array.isArray(kid)) { kid.forEach(function (kk) { if (kk != null) node.append(kk.nodeType ? kk : document.createTextNode(String(kk))); }); }
+      else node.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    });
+    return node;
+  }
+
+  function svgEl(tag, attrs) {
+    var node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (attrs[k] != null) node.setAttribute(k, attrs[k]);
+    });
+    return node;
+  }
+
+  function pad2(n) { return n < 10 ? '0' + n : String(n); }
+
+  function has(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
+
+  function todayKey(d) {
+    var now = d || new Date();
+    return now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+  }
+
+  function isValidDateKey(key) {
+    if (typeof key !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+    var parts = key.split('-').map(Number);
+    var y = parts[0], m = parts[1], d = parts[2];
+    if (y < 1900 || y > 3000 || m < 1 || m > 12 || d < 1 || d > 31) return false;
+    var dt = new Date(Date.UTC(y, m - 1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+  }
+
+  function toUTC(key) {
+    var p = key.split('-').map(Number);
+    return Date.UTC(p[0], p[1] - 1, p[2]);
+  }
+
+  function fromUTC(ms) {
+    var d = new Date(ms);
+    return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate());
+  }
+
+  function addDays(key, n) { return fromUTC(toUTC(key) + n * MS_DAY); }
+
+  function diffDays(fromKey, toKey) { return Math.round((toUTC(toKey) - toUTC(fromKey)) / MS_DAY); }
+
+  function humanSpan(fromKey, toKey) {
+    var f = fromKey.split('-').map(Number);
+    var t = toKey.split('-').map(Number);
+    var y = t[0] - f[0], m = t[1] - f[1], d = t[2] - f[2];
+    if (d < 0) {
+      m -= 1;
+      d += new Date(Date.UTC(t[0], t[1] - 1, 0)).getUTCDate();
+    }
+    if (m < 0) { y -= 1; m += 12; }
+    return { years: y, months: m, days: d, totalDays: diffDays(fromKey, toKey) };
+  }
+
+  function formatDateCN(key) {
+    var p = key.split('-').map(Number);
+    return p[0] + '年' + p[1] + '月' + p[2] + '日';
+  }
+
+  function formatDateShort(key) {
+    var p = key.split('-').map(Number);
+    return p[0] + '-' + pad2(p[1]) + '-' + pad2(p[2]);
+  }
+
+  function formatDuration(span) {
+    var parts = [];
+    if (span.years) parts.push(span.years + ' 年');
+    if (span.months) parts.push(span.months + ' 个月');
+    if (span.days || !parts.length) parts.push(span.days + ' 天');
+    return parts.join(' ');
+  }
+
+  function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+
+  var moneyFmt = new Intl.NumberFormat('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  function formatMoney(n) {
+    if (!Number.isFinite(n)) return '—';
+    var sign = n < 0 ? '-' : '';
+    return sign + '¥' + moneyFmt.format(Math.abs(n));
+  }
+
+  function trimNumber(n, maxDec) {
+    if (!Number.isFinite(n)) return '—';
+    return new Intl.NumberFormat('zh-CN', { maximumFractionDigits: maxDec == null ? 2 : maxDec }).format(n);
+  }
+
+  function formatCompactMoney(n) {
+    if (!Number.isFinite(n)) return '—';
+    var sign = n < 0 ? '-' : '';
+    var a = Math.abs(n), val;
+    if (a >= 1e8) { val = trimNumber(a / 1e8, 2) + '亿'; }
+    else if (a >= 1e4) { val = trimNumber(a / 1e4, 2) + '万'; }
+    else { return formatMoney(n); }
+    return sign + '¥' + val;
+  }
+
+  function formatCompactNumber(n) {
+    var a = Math.abs(n), sign = n < 0 ? '-' : '';
+    if (a >= 1e8) return sign + trimNumber(a / 1e8, 2) + '亿';
+    if (a >= 1e4) return sign + trimNumber(a / 1e4, 2) + '万';
+    return sign + trimNumber(a, 0);
+  }
+
+  function formatRateDecimal(r) {
+    if (!Number.isFinite(r)) return '—';
+    return trimNumber(r * 100, 4) + '%';
+  }
+
+  function normalizeDigits(s) {
+    return s.replace(/[０-９]/g, function (ch) { return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); });
+  }
+
+  function parseAmount(str) {
+    if (typeof str !== 'string') return NaN;
+    var s = normalizeDigits(str).trim();
+    s = s.replace(/[¥￥,\s，]/g, '').replace(/元/g, '').replace(/．/g, '.');
+    var mult = 1;
+    if (/万$/.test(s)) { mult = 1e4; s = s.slice(0, -1); }
+    else if (/亿$/.test(s)) { mult = 1e8; s = s.slice(0, -1); }
+    if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s)) return NaN;
+    return parseFloat(s) * mult;
+  }
+
+  function parseRate(str) {
+    if (typeof str !== 'string') return NaN;
+    var s = normalizeDigits(str).trim().replace(/[%％,\s，]/g, '');
+    if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s)) return NaN;
+    return parseFloat(s) / 100;
+  }
+
+  function uid(prefix) {
+    return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  /* ============================================================
+   * 3. calculation engine
+   * ============================================================ */
+  function dailyRate(annualRate) {
+    return Math.expm1(Math.log1p(annualRate) / 365);
+  }
+
+  function chooseSampleEvery(days) {
+    if (days <= 180) return 1;
+    if (days <= 1826) return 7;
+    if (days <= 10958) return 30;
+    return 90;
+  }
+
+  function projectPoints(opts) {
+    var r = dailyRate(opts.annualRate);
+    var balance = opts.startBalance;
+    var days = Math.max(0, Math.floor(opts.days));
+    var step = opts.sampleEvery || chooseSampleEvery(days);
+    var points = [{ date: opts.fromDate, value: balance }];
+    for (var i = 1; i <= days; i++) {
+      balance = balance * (1 + r) + opts.dailyContribution;
+      if (i % step === 0 || i === days) points.push({ date: addDays(opts.fromDate, i), value: balance });
+    }
+    return points;
+  }
+
+  function simulateProjection(opts) {
+    var startBalance = opts.startBalance;
+    var annualRate = opts.annualRate;
+    var dailyContribution = opts.dailyContribution;
+    var targetAmount = opts.targetAmount;
+    var fromDate = opts.fromDate;
+    var maxDays = opts.maxDays == null ? MAX_DAYS : opts.maxDays;
+
+    if (!Number.isFinite(startBalance) || !Number.isFinite(annualRate) || !Number.isFinite(dailyContribution) ||
+        !Number.isFinite(targetAmount) || annualRate <= -1 || startBalance < 0 || dailyContribution < 0 ||
+        targetAmount <= 0 || !isValidDateKey(fromDate) || maxDays < 1) {
+      return { status: 'invalid', days: null, targetDate: null, finalBalance: startBalance };
+    }
+    var r = dailyRate(annualRate);
+    if (startBalance >= targetAmount - 1e-9) {
+      return { status: 'reached', days: 0, targetDate: fromDate, finalBalance: startBalance };
+    }
+    if (dailyContribution === 0 && r <= 0) {
+      return { status: 'unreachable', reason: 'no-growth', days: null, targetDate: null, finalBalance: startBalance };
+    }
+    var balance = startBalance;
+    for (var day = 1; day <= maxDays; day++) {
+      balance = balance * (1 + r) + dailyContribution;
+      if (!Number.isFinite(balance) || balance >= targetAmount - 1e-9) {
+        return { status: 'reached', days: day, targetDate: addDays(fromDate, day), finalBalance: balance };
+      }
+    }
+    return { status: 'unreachable', reason: 'cap', capped: true, days: null, targetDate: null, finalBalance: balance };
+  }
+
+  function etaFrom(opts) {
+    return simulateProjection(opts);
+  }
+
+  function reverseContribution(opts) {
+    var targetAmount = opts.targetAmount;
+    var currentBalance = opts.currentBalance;
+    var annualRate = opts.annualRate;
+    var fromDate = opts.fromDate;
+    var targetDate = opts.targetDate;
+
+    if (!Number.isFinite(targetAmount) || targetAmount <= 0) return { ok: false, error: '目标金额必须大于 0。' };
+    if (!Number.isFinite(currentBalance) || currentBalance < 0) return { ok: false, error: '当前余额无效。' };
+    if (!Number.isFinite(annualRate) || annualRate <= -1) return { ok: false, error: '年化收益率必须大于 -100%。' };
+    if (!isValidDateKey(fromDate) || !isValidDateKey(targetDate)) return { ok: false, error: '日期无效。' };
+    var n = diffDays(fromDate, targetDate);
+    if (n <= 0) return { ok: false, error: '目标日期需晚于今天。' };
+    if (n > MAX_DAYS) return { ok: false, error: '目标日期不能超过 100 年。' };
+    if (currentBalance >= targetAmount) return { ok: true, daily: 0, weekly: 0, monthly: 0, alreadyMet: true, days: n };
+
+    var r = dailyRate(annualRate);
+    var c;
+    if (Math.abs(r) < 1e-12) {
+      c = (targetAmount - currentBalance) / n;
+    } else {
+      var q = Math.pow(1 + annualRate, n / 365);
+      if (!Number.isFinite(q)) return { ok: false, error: '参数超出可计算范围。' };
+      if (Math.abs(q - 1) < 1e-12) c = (targetAmount - currentBalance) / n;
+      else if (q > 1) c = (targetAmount / q - currentBalance) * r / (1 - 1 / q);
+      else c = (targetAmount - currentBalance * q) * r / (q - 1);
+    }
+    c = Math.max(0, c);
+    return { ok: true, daily: c, weekly: c * 7, monthly: c * 365 / 12, alreadyMet: false, days: n };
+  }
+
+  function buildModel(state, today) {
+    var g = state.goal;
+    if (!g) return { ok: false, error: '尚未设置目标。' };
+    if (g.startDate > today) return { ok: false, error: '开始日期晚于今天。' };
+    var r = dailyRate(g.annualRate);
+    var balance = g.initialPrincipal;
+    var invested = g.initialPrincipal;
+    var contributions = 0;
+    var daily = [];
+    var overlapDates = [];
+    var latestCheckIn = null;
+    var days = diffDays(g.startDate, today);
+
+    for (var i = 0; i <= days; i++) {
+      var date = addDays(g.startDate, i);
+      if (i > 0) balance = balance * (1 + r);
+      var hasCheck = has(state.checkIns, date);
+      var hasRec = has(state.records, date);
+      if (hasCheck) {
+        balance = state.checkIns[date];
+        latestCheckIn = { date: date, value: state.checkIns[date] };
+        if (hasRec) overlapDates.push(date);
+      } else if (hasRec) {
+        balance += state.records[date];
+      }
+      if (hasRec) {
+        invested += state.records[date];
+        contributions += state.records[date];
+      }
+      daily.push({ date: date, balance: balance, isCheckIn: hasCheck, isToday: date === today });
+    }
+
+    return {
+      ok: true,
+      dailyRate: r,
+      daily: daily,
+      balanceToday: daily[daily.length - 1].balance,
+      investedTotal: invested,
+      contributionsTotal: contributions,
+      growth: daily[daily.length - 1].balance - invested,
+      latestCheckIn: latestCheckIn,
+      overlapDates: overlapDates,
+      recordedDays: Object.keys(state.records).length,
+      todayRecord: has(state.records, today) ? state.records[today] : null
+    };
+  }
+
+  function modelBalanceAt(state, dateKey, opts) {
+    var today = (opts && opts.today) || todayKey();
+    var model = (opts && opts.model) || buildModel(state, today);
+    if (!model.ok || !isValidDateKey(dateKey) || !state.goal) return null;
+    if (dateKey < state.goal.startDate) return null;
+    if (dateKey <= today) {
+      var idx = diffDays(state.goal.startDate, dateKey);
+      return model.daily[idx] ? model.daily[idx].balance : null;
+    }
+    var r = dailyRate(state.goal.annualRate);
+    var balance = model.balanceToday;
+    var n = diffDays(today, dateKey);
+    for (var i = 0; i < n; i++) balance = balance * (1 + r) + state.goal.plannedDaily;
+    return balance;
+  }
+
+  function computeDerived(state, today) {
+    if (!state.goal) return { today: today, status: 'empty', model: null, eta: null, progress: 0 };
+    var model = buildModel(state, today);
+    if (!model.ok) {
+      return { today: today, status: 'active', model: null, eta: null, progress: 0, error: model.error };
+    }
+    var g = state.goal;
+    var eta = simulateProjection({
+      startBalance: model.balanceToday,
+      annualRate: g.annualRate,
+      dailyContribution: g.plannedDaily,
+      targetAmount: g.targetAmount,
+      fromDate: today
+    });
+    var status = 'active';
+    if (model.balanceToday >= g.targetAmount - 1e-9) status = 'reached';
+    else if (eta.status === 'unreachable') status = 'unreachable';
+    return {
+      today: today,
+      status: status,
+      model: model,
+      eta: eta,
+      progress: model.balanceToday / g.targetAmount
+    };
+  }
+
+  /* ============================================================
+   * 4. state, validation, persistence
+   * ============================================================ */
+  function preferredTheme() {
+    try { return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    catch (e) { return 'light'; }
+  }
+
+  function createDefaultState(theme) {
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      goal: null,
+      records: {},
+      checkIns: {},
+      plans: [],
+      settings: { theme: theme === 'dark' ? 'dark' : 'light' }
+    };
+  }
+
+  function validateState(raw, opts) {
+    opts = opts || {};
+    var today = opts.today || todayKey();
+    var strictDates = !!opts.strictDates;
+    var dropInvalid = !!opts.dropInvalid;
+    var errors = [];
+    function fail(msg) { if (errors.length < 6) errors.push(msg); }
+    function num(v) { return typeof v === 'number' && Number.isFinite(v); }
+
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      return { ok: false, errors: ['文件不是有效的 JSON 对象。'], state: null };
+    }
+    if (raw.schemaVersion !== SCHEMA_VERSION) {
+      return { ok: false, errors: ['不支持的数据版本（需要 schemaVersion ' + SCHEMA_VERSION + '）。'], state: null };
+    }
+    var theme = raw.settings && raw.settings.theme === 'dark' ? 'dark' : 'light';
+    var state = createDefaultState(theme);
+    var goalValid = false;
+
+    if (raw.goal != null) {
+      var g = raw.goal;
+      if (!g || typeof g !== 'object' || Array.isArray(g)) {
+        fail('目标数据格式错误。');
+      } else {
+        var goalErrBefore = errors.length;
+        if (!num(g.targetAmount) || g.targetAmount <= 0) fail('目标金额必须大于 0。');
+        if (!num(g.initialPrincipal) || g.initialPrincipal < 0) fail('当前本金不能为负数。');
+        if (!isValidDateKey(g.startDate)) fail('开始日期无效。');
+        else if (g.startDate > today) fail('开始日期不能晚于今天。');
+        if (!num(g.plannedDaily) || g.plannedDaily < 0) fail('每日投入不能为负数。');
+        if (!num(g.annualRate) || g.annualRate <= -1) fail('年化收益率必须大于 -100%。');
+        if (errors.length === goalErrBefore) {
+          state.goal = {
+            targetAmount: round2(g.targetAmount),
+            initialPrincipal: round2(g.initialPrincipal),
+            startDate: g.startDate,
+            plannedDaily: round2(g.plannedDaily),
+            annualRate: g.annualRate
+          };
+          goalValid = true;
+        }
+      }
+    }
+
+    if (state.goal) {
+      var start = state.goal.startDate;
+      var readDated = function (obj, label, target, minVal, allowZero) {
+        if (obj == null) return;
+        if (typeof obj !== 'object' || Array.isArray(obj)) { fail(label + '格式错误。'); return; }
+        Object.keys(obj).forEach(function (k) {
+          var v = obj[k];
+          if (!isValidDateKey(k)) { fail(label + '包含无效日期。'); return; }
+          if (k < start) {
+            if (strictDates) fail(label + '包含早于开始日期的条目。');
+            return;
+          }
+          if (k > today) {
+            if (strictDates) fail(label + '包含未来日期的条目。');
+            return;
+          }
+          if (!num(v) || (allowZero ? v < 0 : v <= 0)) { fail(label + '包含无效金额。'); return; }
+          target[k] = round2(v);
+        });
+      };
+      readDated(raw.records, '投入记录', state.records, 0.01, false);
+      readDated(raw.checkIns, '市值核对', state.checkIns, 0, true);
+
+      if (raw.plans != null) {
+        if (!Array.isArray(raw.plans)) fail('方案数据格式错误。');
+        else if (raw.plans.length > MAX_PLANS) fail('最多只能有 ' + MAX_PLANS + ' 个方案。');
+        else {
+          var ids = {};
+          raw.plans.forEach(function (p) {
+            var planErrBefore = errors.length;
+            if (!p || typeof p !== 'object' || Array.isArray(p)) { fail('方案数据格式错误。'); return; }
+            var name = typeof p.name === 'string' ? p.name.trim() : '';
+            if (!name || name.length > 40) fail('方案名称需为 1–40 个字符。');
+            if (!num(p.daily) || p.daily < 0) fail('方案的每日投入不能为负数。');
+            if (!num(p.annualRate) || p.annualRate <= -1) fail('方案的年化收益率必须大于 -100%。');
+            if (typeof p.id !== 'string' || !p.id || ids[p.id]) fail('方案 ID 无效或重复。');
+            else ids[p.id] = true;
+            if (typeof p.color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(p.color)) fail('方案颜色无效。');
+            if (errors.length === planErrBefore) {
+              state.plans.push({ id: p.id, name: name, daily: round2(p.daily), annualRate: p.annualRate, color: p.color.toUpperCase() });
+            }
+          });
+        }
+      }
+    } else {
+      if (raw.records && typeof raw.records === 'object' && Object.keys(raw.records).length) fail('没有目标时不能包含投入记录。');
+      if (raw.checkIns && typeof raw.checkIns === 'object' && Object.keys(raw.checkIns).length) fail('没有目标时不能包含市值核对。');
+      if (Array.isArray(raw.plans) && raw.plans.length) fail('没有目标时不能包含方案。');
+    }
+
+    var sourceOk = raw.goal == null ? true : goalValid;
+    if (dropInvalid) return { ok: sourceOk, errors: errors, state: sourceOk ? state : null };
+    return { ok: errors.length === 0, errors: errors, state: errors.length === 0 ? state : null };
+  }
+
+  function loadState() {
+    var raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); }
+    catch (e) { app.storageOk = false; return { state: createDefaultState(preferredTheme()), warning: null, corrupt: false }; }
+    if (!raw) return { state: createDefaultState(preferredTheme()), warning: null, corrupt: false };
+    try {
+      var parsed = JSON.parse(raw);
+      var res = validateState(parsed, { today: todayKey(), dropInvalid: true });
+      if (!res.ok) throw new Error('invalid');
+      return { state: res.state, warning: res.errors.length ? '部分本地数据无效，已自动忽略。' : null, corrupt: false };
+    } catch (e) {
+      try { localStorage.setItem(CORRUPT_KEY, raw); } catch (e2) { /* ignore */ }
+      return { state: createDefaultState(preferredTheme()), warning: null, corrupt: true };
+    }
+  }
+
+  function persist(state) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      app.storageOk = true;
+    } catch (e) {
+      app.storageOk = false;
+    }
+    updateBanner();
+  }
+
+  var bannerState = { message: '', sticky: false };
+  function showBanner(message) {
+    bannerState.message = message;
+    var el = $('#app-banner');
+    if (!el) return;
+    el.textContent = message;
+    el.hidden = !message;
+  }
+  function updateBanner() {
+    var msg = '';
+    if (!app.storageOk) msg = '本地存储不可用，刷新后数据会丢失。请立即导出备份。';
+    showBanner(msg || bannerState.message);
+  }
+
+  /* ============================================================
+   * 5. chart building and rendering
+   * ============================================================ */
+  function niceStep(raw) {
+    if (!(raw > 0)) return 1;
+    var exp = Math.floor(Math.log10(raw));
+    var base = Math.pow(10, exp);
+    var n = raw / base;
+    var step;
+    if (n <= 1) step = 1;
+    else if (n <= 2) step = 2;
+    else if (n <= 2.5) step = 2.5;
+    else if (n <= 5) step = 5;
+    else step = 10;
+    return step * base;
+  }
+
+  function niceMax(v, count) {
+    if (!(v > 0)) return 1;
+    var step = niceStep(v / (count || 5));
+    return Math.ceil(v / step) * step;
+  }
+
+  function yTicks(max, count) {
+    var step = niceStep(max / (count || 5));
+    var ticks = [];
+    for (var v = 0; v <= max + step * 0.0001; v += step) {
+      ticks.push(Math.round(v * 1e6) / 1e6);
+      if (ticks.length > 20) break;
+    }
+    return ticks;
+  }
+
+  function sampleHistory(daily, maxPoints) {
+    maxPoints = maxPoints || 600;
+    var n = daily.length;
+    if (n <= maxPoints) {
+      return daily.map(function (p) { return { date: p.date, value: p.balance }; });
+    }
+    var stride = Math.ceil(n / maxPoints);
+    var out = [];
+    for (var i = 0; i < n; i += stride) out.push({ date: daily[i].date, value: daily[i].balance });
+    var last = daily[n - 1];
+    if (out[out.length - 1].date !== last.date) out.push({ date: last.date, value: last.balance });
+    return out;
+  }
+
+  function maxOfPoints(arrays) {
+    var m = 0;
+    arrays.forEach(function (arr) {
+      if (!arr) return;
+      for (var i = 0; i < arr.length; i++) if (arr[i].value > m) m = arr[i].value;
+    });
+    return m;
+  }
+
+  function buildMainChart(state, derived) {
+    var g = state.goal;
+    if (!g || !derived.model) return null;
+    var model = derived.model;
+    var history = sampleHistory(model.daily);
+    var series = [{ id: 'baseline', label: '推算余额', isBaseline: true, history: history }];
+    var xMinTs = toUTC(g.startDate);
+    var xMaxTs = toUTC(derived.today);
+    var targetDate = null;
+    var note = '';
+
+    if (derived.status === 'active' && derived.eta && derived.eta.status === 'reached') {
+      var days = derived.eta.days;
+      var projection = projectPoints({
+        startBalance: model.balanceToday,
+        annualRate: g.annualRate,
+        dailyContribution: g.plannedDaily,
+        fromDate: derived.today,
+        days: days
+      });
+      series[0].projection = projection;
+      targetDate = derived.eta.targetDate;
+      xMaxTs = toUTC(addDays(targetDate, 1));
+    } else if (derived.status === 'unreachable') {
+      var horizon = 1826;
+      series[0].projection = projectPoints({
+        startBalance: model.balanceToday,
+        annualRate: g.annualRate,
+        dailyContribution: g.plannedDaily,
+        fromDate: derived.today,
+        days: horizon
+      });
+      xMaxTs = toUTC(addDays(derived.today, horizon));
+      note = '按当前参数无法达成目标，图中为未来 5 年推算。';
+    } else if (derived.status === 'reached') {
+      note = '目标已达成，不再显示未来预测。';
+    }
+
+    var checkIns = Object.keys(state.checkIns)
+      .filter(function (d) { return d >= g.startDate && d <= derived.today; })
+      .sort()
+      .map(function (d) { return { date: d, value: state.checkIns[d] }; });
+
+    var maxVal = Math.max(
+      g.targetAmount,
+      maxOfPoints([history, series[0].projection]),
+      checkIns.reduce(function (mx, c) { return Math.max(mx, c.value); }, 0)
+    );
+    var yMax = niceMax(maxVal * 1.03, 5);
+
+    if (xMaxTs <= xMinTs) xMaxTs = xMinTs + MS_DAY;
+
+    return {
+      mode: 'main',
+      xMinTs: xMinTs,
+      xMaxTs: xMaxTs,
+      yMax: yMax,
+      target: g.targetAmount,
+      targetDate: targetDate,
+      checkIns: checkIns,
+      series: series,
+      note: note
+    };
+  }
+
+  function buildCompareChart(state, derived) {
+    var g = state.goal;
+    if (!g || !derived.model) return null;
+    var today = derived.today;
+    var balance = derived.model.balanceToday;
+    var series = [];
+    var baselineDays = 0;
+
+    var baseEta = simulateProjection({
+      startBalance: balance, annualRate: g.annualRate, dailyContribution: g.plannedDaily,
+      targetAmount: g.targetAmount, fromDate: today
+    });
+    if (balance < g.targetAmount - 1e-9) {
+      baselineDays = baseEta.status === 'reached' ? baseEta.days : 1826;
+      series.push({
+        id: 'baseline', label: '当前计划', isBaseline: true,
+        projection: projectPoints({ startBalance: balance, annualRate: g.annualRate, dailyContribution: g.plannedDaily, fromDate: today, days: baselineDays })
+      });
+    }
+
+    var allDays = [baselineDays];
+    state.plans.forEach(function (p) {
+      var eta = simulateProjection({
+        startBalance: balance, annualRate: p.annualRate, dailyContribution: p.daily,
+        targetAmount: g.targetAmount, fromDate: today
+      });
+      var days = eta.status === 'reached' ? eta.days : 1826;
+      allDays.push(days);
+      series.push({
+        id: p.id, label: p.name, color: p.color,
+        projection: projectPoints({ startBalance: balance, annualRate: p.annualRate, dailyContribution: p.daily, fromDate: today, days: days })
+      });
+    });
+
+    if (!series.length) return { mode: 'compare', empty: true, series: [] };
+
+    var maxDays = Math.max.apply(null, allDays);
+    if (maxDays < 1) maxDays = 1;
+    var xMinTs = toUTC(today);
+    var xMaxTs = toUTC(addDays(today, maxDays + 1));
+    var maxVal = Math.max(g.targetAmount, maxOfPoints(series.map(function (s) { return s.projection; })));
+    var yMax = niceMax(maxVal * 1.03, 5);
+
+    return {
+      mode: 'compare',
+      xMinTs: xMinTs,
+      xMaxTs: xMaxTs,
+      yMax: yMax,
+      target: g.targetAmount,
+      targetDate: null,
+      checkIns: [],
+      series: series,
+      note: ''
+    };
+  }
+
+  function pointsToPath(points, x, y) {
+    if (!points || !points.length) return '';
+    var d = '';
+    for (var i = 0; i < points.length; i++) {
+      d += (i === 0 ? 'M' : 'L') + x(toUTC(points[i].date)).toFixed(1) + ',' + y(points[i].value).toFixed(1);
+    }
+    return d;
+  }
+
+  function fmtAxisDate(ts, spanDays) {
+    var d = new Date(ts);
+    if (spanDays > 1095) return String(d.getUTCFullYear());
+    if (spanDays > 180) return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1);
+    return pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate());
+  }
+
+  function nearestPoint(points, ts) {
+    if (!points || !points.length) return null;
+    var lo = 0, hi = points.length - 1;
+    while (lo < hi) {
+      var mid = (lo + hi) >> 1;
+      if (toUTC(points[mid].date) < ts) lo = mid + 1; else hi = mid;
+    }
+    var best = points[lo];
+    if (lo > 0) {
+      var prev = points[lo - 1];
+      if (Math.abs(toUTC(prev.date) - ts) <= Math.abs(toUTC(best.date) - ts)) best = prev;
+    }
+    return best;
+  }
+
+  function renderChart(container, model) {
+    if (!container) return;
+    container._chartModel = model;
+    if (!container._chartRO) {
+      var ro = new ResizeObserver(function () {
+        if (!container._chartModel || container.clientWidth < 80) return;
+        clearTimeout(container._chartT);
+        container._chartT = setTimeout(function () { renderChart(container, container._chartModel); }, 80);
+      });
+      ro.observe(container);
+      container._chartRO = ro;
+    }
+    if (!model) { container.textContent = ''; return; }
+    var width = container.clientWidth;
+    if (width < 80) return;
+
+    container.textContent = '';
+    if (model.empty) {
+      container.appendChild(h('p', { class: 'muted small chart-empty', text: '暂无预测数据。添加方案后即可对比。' }));
+      return;
+    }
+    var compact = width < 640;
+    var height = compact ? 280 : 380;
+    var m = compact ? { l: 46, r: 14, t: 16, b: 28 } : { l: 64, r: 22, t: 18, b: 34 };
+    var plotW = Math.max(10, width - m.l - m.r);
+    var plotH = Math.max(10, height - m.t - m.b);
+    var spanMs = Math.max(1, model.xMaxTs - model.xMinTs);
+    var spanDays = spanMs / MS_DAY;
+
+    function x(ts) { return m.l + (ts - model.xMinTs) / spanMs * plotW; }
+    function y(v) { return m.t + plotH - Math.min(Math.max(v, 0), model.yMax) / model.yMax * plotH; }
+
+    var svg = svgEl('svg', {
+      viewBox: '0 0 ' + width + ' ' + height,
+      width: '100%',
+      height: height,
+      role: 'img',
+      'aria-label': '余额轨迹图，目标金额 ' + formatMoney(model.target)
+    });
+
+    var ticks = yTicks(model.yMax, 5);
+    ticks.forEach(function (v) {
+      svg.appendChild(svgEl('line', { x1: m.l, x2: width - m.r, y1: y(v), y2: y(v), class: 'grid-line' }));
+      var label = svgEl('text', { x: m.l - 8, y: y(v) + 3.5, 'text-anchor': 'end', class: 'axis-label' });
+      label.textContent = formatCompactNumber(v);
+      svg.appendChild(label);
+    });
+
+    var xCount = compact ? 4 : 5;
+    for (var i = 0; i <= xCount; i++) {
+      var ts = model.xMinTs + spanMs * i / xCount;
+      var xl = svgEl('text', { x: x(ts), y: height - 9, 'text-anchor': i === 0 ? 'start' : (i === xCount ? 'end' : 'middle'), class: 'axis-label' });
+      xl.textContent = fmtAxisDate(ts, spanDays);
+      svg.appendChild(xl);
+    }
+
+    var targetY = y(model.target);
+    svg.appendChild(svgEl('line', { x1: m.l, x2: width - m.r, y1: targetY, y2: targetY, class: 'target-line' }));
+    var tl = svgEl('text', { x: width - m.r, y: Math.max(m.t + 10, targetY - 7), 'text-anchor': 'end', class: 'target-label' });
+    tl.textContent = '目标 ' + formatCompactMoney(model.target);
+    svg.appendChild(tl);
+
+    model.series.forEach(function (s) {
+      if (s.history && s.history.length) {
+        var p1 = svgEl('path', { d: pointsToPath(s.history, x, y), class: 'series-line' + (s.isBaseline ? ' series-baseline' : '') });
+        if (!s.isBaseline) p1.style.stroke = s.color;
+        svg.appendChild(p1);
+        if (s.history.length === 1) {
+          var dot = svgEl('circle', { cx: x(toUTC(s.history[0].date)), cy: y(s.history[0].value), r: 3.4 });
+          dot.style.fill = s.isBaseline ? 'var(--accent)' : s.color;
+          svg.appendChild(dot);
+        }
+      }
+      if (s.projection && s.projection.length) {
+        var p2 = svgEl('path', { d: pointsToPath(s.projection, x, y), class: 'series-line series-projection' + (s.isBaseline ? ' series-baseline' : '') });
+        if (!s.isBaseline) p2.style.stroke = s.color;
+        svg.appendChild(p2);
+        if (s.projection.length === 1) {
+          var pdot = svgEl('circle', { cx: x(toUTC(s.projection[0].date)), cy: y(s.projection[0].value), r: 3.4 });
+          pdot.style.fill = s.isBaseline ? 'var(--accent)' : s.color;
+          svg.appendChild(pdot);
+        }
+      }
+    });
+
+    var lastCheckIn = model.checkIns.length ? model.checkIns[model.checkIns.length - 1] : null;
+    model.checkIns.forEach(function (c) {
+      svg.appendChild(svgEl('circle', { cx: x(toUTC(c.date)), cy: y(c.value), r: 4, class: 'checkin-dot' }));
+      if (lastCheckIn && c.date === lastCheckIn.date) {
+        svg.appendChild(svgEl('circle', { cx: x(toUTC(c.date)), cy: y(c.value), r: 8, class: 'checkin-ring' }));
+      }
+    });
+
+    /* hover layer */
+    var hover = svgEl('g', {});
+    var cross = svgEl('line', { y1: m.t, y2: m.t + plotH, class: 'hover-cross', visibility: 'hidden' });
+    hover.appendChild(cross);
+    var hoverDots = model.series.map(function (s) {
+      var c = svgEl('circle', { r: 4.2, class: 'hover-dot', visibility: 'hidden' });
+      c.style.fill = s.isBaseline ? 'var(--accent)' : s.color;
+      hover.appendChild(c);
+      return { node: c, series: s };
+    });
+    svg.appendChild(hover);
+
+    var capture = svgEl('rect', { x: m.l, y: m.t, width: plotW, height: plotH, fill: 'transparent' });
+    capture.style.cursor = 'crosshair';
+    svg.appendChild(capture);
+
+    var tooltip = h('div', { class: 'chart-tooltip', hidden: true });
+    container.appendChild(svg);
+    container.appendChild(tooltip);
+
+    function seriesPoints(s) {
+      var arr = [];
+      if (s.history) arr = arr.concat(s.history);
+      if (s.projection) arr = arr.concat(s.projection);
+      arr.sort(function (a, b) { return toUTC(a.date) - toUTC(b.date); });
+      var out = [];
+      arr.forEach(function (p) {
+        if (!out.length || out[out.length - 1].date !== p.date) out.push(p);
+      });
+      return out;
+    }
+    var prepared = model.series.map(function (s) { return { series: s, points: seriesPoints(s) }; });
+
+    function showAt(clientX) {
+      var rect = svg.getBoundingClientRect();
+      if (!rect.width) return;
+      var px = (clientX - rect.left) / rect.width * width;
+      if (px < m.l || px > width - m.r) { hide(); return; }
+      var ts = model.xMinTs + (px - m.l) / plotW * spanMs;
+      var rows = [];
+      var minY = null;
+      prepared.forEach(function (item, idx) {
+        var pt = nearestPoint(item.points, ts);
+        if (!pt) return;
+        var py = y(pt.value);
+        if (minY === null || py < minY) minY = py;
+        var dot = hoverDots[idx].node;
+        dot.setAttribute('cx', x(toUTC(pt.date)));
+        dot.setAttribute('cy', py);
+        dot.setAttribute('visibility', 'visible');
+        rows.push({ name: item.series.label, color: item.series.isBaseline ? 'var(--accent)' : item.series.color, value: pt.value, date: pt.date });
+      });
+      if (!rows.length) { hide(); return; }
+      cross.setAttribute('x1', px); cross.setAttribute('x2', px);
+      cross.setAttribute('visibility', 'visible');
+      tooltip.textContent = '';
+      tooltip.appendChild(h('div', { class: 'tt-date', text: formatDateCN(rows[0].date) }));
+      rows.forEach(function (r) {
+        var sw = h('i', { class: 'legend-dot' });
+        sw.style.background = r.color;
+        tooltip.appendChild(h('div', { class: 'tt-row' },
+          h('span', { class: 'tt-name' }, sw, document.createTextNode(r.name)),
+          h('span', { class: 'tt-val', text: formatMoney(r.value) })
+        ));
+      });
+      tooltip.hidden = false;
+      var left = px + 14;
+      if (left + 240 > width) left = Math.max(8, px - 254);
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = '10px';
+      if (minY != null) tooltip.style.top = Math.max(6, Math.min(height - 120, minY - 20)) + 'px';
+    }
+    function hide() {
+      cross.setAttribute('visibility', 'hidden');
+      hoverDots.forEach(function (d) { d.node.setAttribute('visibility', 'hidden'); });
+      tooltip.hidden = true;
+    }
+    capture.addEventListener('pointermove', function (e) { showAt(e.clientX); });
+    capture.addEventListener('pointerdown', function (e) { showAt(e.clientX); });
+    capture.addEventListener('pointerleave', hide);
+    capture.addEventListener('pointercancel', hide);
+  }
+
+  /* ============================================================
+   * 6. UI rendering
+   * ============================================================ */
+  function render() {
+    var hasGoal = !!app.state.goal;
+    $('#view-onboarding').hidden = hasGoal;
+    $('#app-shell').hidden = !hasGoal;
+    updateThemeIcon();
+    if (!hasGoal) return;
+
+    $$('.tab').forEach(function (t) {
+      var on = t.dataset.tab === app.activeTab;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+    });
+    $$('.panel').forEach(function (p) {
+      p.hidden = p.id !== 'panel-' + app.activeTab;
+    });
+
+    if (app.activeTab === 'dashboard') renderDashboard();
+    else if (app.activeTab === 'records') renderRecords();
+    else if (app.activeTab === 'compare') renderCompare();
+    else renderSettings();
+  }
+
+  function commit() {
+    persist(app.state);
+    app.derived = computeDerived(app.state, app.today);
+    render();
+  }
+
+  function renderDashboard() {
+    var d = app.derived;
+    var g = app.state.goal;
+    if (!g) return;
+    if (!d.model) {
+      $('#dash-balance').textContent = '—';
+      $('#dash-balance-exact').textContent = '';
+      $('#dash-today-status').textContent = '';
+      $('#dash-progress-fill').style.width = '0%';
+      $('#dash-progress-label').textContent = '0%';
+      $('#dash-status-badge').textContent = '需要检查';
+      $('#dash-status-badge').className = 'badge warn';
+      $('#dash-target-date').textContent = '—';
+      $('#dash-remaining').textContent = '—';
+      $('#dash-remaining-sub').textContent = '';
+      $('#dash-assumption').textContent = '';
+      var hnt = $('#dash-hint');
+      hnt.hidden = false; hnt.textContent = d.error || '目标数据有误。';
+      renderMainChart();
+      return;
+    }
+    var mo = d.model;
+    $('#dash-balance').textContent = formatCompactMoney(mo.balanceToday);
+    $('#dash-balance-exact').textContent = '精确余额 ' + formatMoney(mo.balanceToday);
+    $('#dash-today-status').textContent = mo.todayRecord != null ? '今日已投入 ' + formatMoney(mo.todayRecord) : '今天还未记录投入';
+
+    var pct = d.progress * 100;
+    $('#dash-progress-fill').style.width = Math.max(0, Math.min(100, pct)) + '%';
+    $('#dash-progress-label').textContent = (pct >= 1000 ? pct.toFixed(0) : pct.toFixed(1)) + '%';
+
+    var badge = $('#dash-status-badge');
+    var hint = $('#dash-hint');
+    hint.hidden = true;
+    hint.textContent = '';
+    $('#dash-remaining-sub').textContent = '';
+
+    if (d.status === 'reached') {
+      badge.textContent = '已达成';
+      badge.className = 'badge';
+      $('#dash-target-date').textContent = '已达成';
+      $('#dash-remaining').textContent = '0 天';
+      $('#dash-remaining-sub').textContent = '超出目标 ' + formatMoney(mo.balanceToday - g.targetAmount);
+      $('#dash-assumption').textContent = '目标已达成，无需继续预测。';
+    } else if (d.status === 'unreachable') {
+      badge.textContent = '无法达成';
+      badge.className = 'badge warn';
+      $('#dash-target-date').textContent = '—';
+      $('#dash-remaining').textContent = '—';
+      $('#dash-assumption').textContent = '按计划日投 ' + formatMoney(g.plannedDaily) + '、年化 ' + formatRateDecimal(g.annualRate) + ' 推算';
+      hint.hidden = false;
+      hint.textContent = d.eta && d.eta.reason === 'no-growth'
+        ? '每日投入为 0 且收益率不高于 0，余额不会增长。请提高每日投入或收益率。'
+        : '按当前参数，100 年内无法达成目标。可提高每日投入、收益率，或下调目标金额。';
+    } else {
+      badge.textContent = '进行中';
+      badge.className = 'badge';
+      var span = humanSpan(app.today, d.eta.targetDate);
+      $('#dash-target-date').textContent = formatDateCN(d.eta.targetDate);
+      $('#dash-remaining').textContent = formatDuration(span);
+      $('#dash-remaining-sub').textContent = '共 ' + span.totalDays + ' 天';
+      $('#dash-assumption').textContent = '按计划日投 ' + formatMoney(g.plannedDaily) + '、年化 ' + formatRateDecimal(g.annualRate) + ' 推算';
+    }
+
+    $('#stat-target').textContent = formatCompactMoney(g.targetAmount);
+    $('#stat-target-sub').textContent = '精确 ' + formatMoney(g.targetAmount);
+    $('#stat-invested').textContent = formatMoney(mo.investedTotal);
+    $('#stat-invested-sub').textContent = '含本金 ' + formatMoney(g.initialPrincipal) + ' · ' + mo.recordedDays + ' 笔记录';
+
+    var growth = mo.growth;
+    var growthEl = $('#stat-growth');
+    growthEl.textContent = (growth > 0 ? '+' : '') + formatMoney(growth);
+    growthEl.className = 'stat-value ' + (growth >= 0 ? 'positive' : 'negative');
+    var growthPct = mo.investedTotal > 0 ? growth / mo.investedTotal * 100 : 0;
+    $('#stat-growth-sub').textContent = '占累计投入 ' + (growthPct >= 0 ? '+' : '') + growthPct.toFixed(1) + '%';
+
+    if (mo.latestCheckIn) {
+      $('#stat-checkin').textContent = formatMoney(mo.latestCheckIn.value);
+      $('#stat-checkin-sub').textContent = formatDateShort(mo.latestCheckIn.date) + ' · 已覆盖当日推算';
+    } else {
+      $('#stat-checkin').textContent = '尚无核对';
+      $('#stat-checkin-sub').textContent = '当前为模型推算';
+    }
+
+    $('#btn-record-today').textContent = mo.todayRecord != null ? '编辑今日投入' : '记录今日投入';
+
+    setTimeout(renderMainChart, 0);
+  }
+
+  function renderMainChart() {
+    var chart = buildMainChart(app.state, app.derived);
+    app.chartModels.main = chart;
+    var container = $('#chart-main');
+    if (!container) return;
+    var notes = [];
+    if (chart && chart.note) notes.push(chart.note);
+    if (app.derived.model && app.derived.model.recordedDays === 0) {
+      notes.push('尚无投入记录，预测完全按计划日投推算。若想计入今天的投入，请先记录。');
+    }
+    $('#chart-main-note').textContent = notes.join(' ');
+    if (!chart) { container.textContent = ''; return; }
+    renderChart(container, chart);
+  }
+
+  function renderRecords() {
+    var g = app.state.goal;
+    if (!g) return;
+    var dates = Object.keys(app.state.records).sort().reverse();
+    var total = dates.reduce(function (s, d) { return s + app.state.records[d]; }, 0);
+    $('#records-summary').textContent = '共 ' + dates.length + ' 天有记录 · 累计投入 ' + formatMoney(total) + '（不含本金）';
+
+    var wrap = $('#records-table-wrap');
+    wrap.textContent = '';
+    if (!dates.length) {
+      wrap.appendChild(h('p', { class: 'empty-note', text: '还没有投入记录。记录第一笔，让预测更贴近现实。' }));
+      $('#records-pager').textContent = '';
+    } else {
+      var pages = Math.max(1, Math.ceil(dates.length / PAGE_SIZE));
+      if (app.ui.recordPage >= pages) app.ui.recordPage = pages - 1;
+      if (app.ui.recordPage < 0) app.ui.recordPage = 0;
+      var start = app.ui.recordPage * PAGE_SIZE;
+      var slice = dates.slice(start, start + PAGE_SIZE);
+      var tbody = h('tbody');
+      slice.forEach(function (date) {
+        tbody.appendChild(h('tr', null,
+          h('td', { 'data-label': '日期' }, document.createTextNode(formatDateShort(date))),
+          h('td', { 'data-label': '金额', class: 'num' }, document.createTextNode(formatMoney(app.state.records[date]))),
+          h('td', { 'data-label': '操作', style: 'text-align:right' },
+            h('button', {
+              class: 'link-btn', type: 'button', text: '编辑',
+              onclick: function () { openRecordDialog({ editDate: date }); }
+            }),
+            h('button', {
+              class: 'link-btn danger', type: 'button', text: '删除',
+              onclick: function () { deleteRecord(date); }
+            })
+          )
+        ));
+      });
+      var table = h('table', { class: 'data-table' },
+        h('thead', null, h('tr', null,
+          h('th', { text: '日期' }), h('th', { text: '金额' }), h('th', { text: '操作', style: 'text-align:right' })
+        )),
+        tbody
+      );
+      wrap.appendChild(h('div', { class: 'table-scroll' }, table));
+
+      var pager = $('#records-pager');
+      pager.textContent = '';
+      if (pages > 1) {
+        pager.appendChild(h('button', {
+          class: 'link-btn', type: 'button', text: '‹ 上一页',
+          disabled: app.ui.recordPage === 0 || null,
+          onclick: function () { app.ui.recordPage--; renderRecords(); }
+        }));
+        pager.appendChild(h('span', { text: '第 ' + (app.ui.recordPage + 1) + ' / ' + pages + ' 页' }));
+        pager.appendChild(h('button', {
+          class: 'link-btn', type: 'button', text: '下一页 ›',
+          disabled: app.ui.recordPage >= pages - 1 || null,
+          onclick: function () { app.ui.recordPage++; renderRecords(); }
+        }));
+      }
+    }
+
+    var list = $('#checkins-list');
+    list.textContent = '';
+    var cDates = Object.keys(app.state.checkIns).sort().reverse();
+    if (!cDates.length) {
+      list.appendChild(h('p', { class: 'empty-note', text: '尚无市值核对，当前使用模型推算。' }));
+    } else {
+      var ct = h('tbody');
+      cDates.forEach(function (date, idx) {
+        var overlap = has(app.state.records, date);
+        ct.appendChild(h('tr', null,
+          h('td', { 'data-label': '日期' },
+            document.createTextNode(formatDateShort(date)),
+            idx === 0 ? h('span', { class: 'badge', style: 'margin-left:8px;font-size:.68rem' }, document.createTextNode('最新')) : null
+          ),
+          h('td', { 'data-label': '实际市值', class: 'num' },
+            document.createTextNode(formatMoney(app.state.checkIns[date])),
+            overlap ? h('span', { class: 'muted small', style: 'margin-left:8px', title: '该日已有投入记录；核对值作为当日最终余额，记录仍计入累计投入。' }, document.createTextNode('同日有投入记录')) : null
+          ),
+          h('td', { 'data-label': '操作', style: 'text-align:right' },
+            h('button', {
+              class: 'link-btn', type: 'button', text: '编辑',
+              onclick: function () { openCheckInDialog({ editDate: date }); }
+            }),
+            h('button', {
+              class: 'link-btn danger', type: 'button', text: '删除',
+              onclick: function () { deleteCheckIn(date); }
+            })
+          )
+        ));
+      });
+      list.appendChild(h('div', { class: 'table-scroll' },
+        h('table', { class: 'data-table' },
+          h('thead', null, h('tr', null, h('th', { text: '日期' }), h('th', { text: '实际市值' }), h('th', { text: '操作', style: 'text-align:right' }))),
+          ct
+        )
+      ));
+    }
+  }
+
+  function planEta(plan) {
+    var g = app.state.goal;
+    var d = app.derived;
+    if (!g || !d.model) return null;
+    return simulateProjection({
+      startBalance: d.model.balanceToday,
+      annualRate: plan.annualRate,
+      dailyContribution: plan.daily,
+      targetAmount: g.targetAmount,
+      fromDate: app.today
+    });
+  }
+
+  function etaCell(eta) {
+    if (!eta) return h('td', { 'data-label': '预计达成', text: '—' });
+    if (eta.status === 'reached') {
+      var span = humanSpan(app.today, eta.targetDate);
+      return h('td', { 'data-label': '预计达成' },
+        document.createTextNode(formatDateShort(eta.targetDate)),
+        h('span', { class: 'muted small', style: 'margin-left:8px' }, document.createTextNode(formatDuration(span)))
+      );
+    }
+    return h('td', { 'data-label': '预计达成', text: '无法达成' });
+  }
+
+  function renderCompare() {
+    var g = app.state.goal;
+    if (!g) return;
+    var wrap = $('#plans-table-wrap');
+    wrap.textContent = '';
+
+    var baseEta = planEta({ daily: g.plannedDaily, annualRate: g.annualRate });
+    var tbody = h('tbody');
+    tbody.appendChild(h('tr', { class: 'baseline-row' },
+      h('td', { 'data-label': '方案' }, h('span', { class: 'color-dot', style: 'background: var(--accent)' }), document.createTextNode('当前计划')),
+      h('td', { 'data-label': '每日投入', class: 'num', text: formatMoney(g.plannedDaily) }),
+      h('td', { 'data-label': '年化收益率', class: 'num', text: formatRateDecimal(g.annualRate) }),
+      etaCell(baseEta),
+      h('td', { 'data-label': '操作', style: 'text-align:right' }, h('span', { class: 'muted small', text: '基准' }))
+    ));
+    app.state.plans.forEach(function (p) {
+      var eta = planEta(p);
+      tbody.appendChild(h('tr', null,
+        h('td', { 'data-label': '方案' }, h('span', { class: 'color-dot', style: 'background:' + p.color }), document.createTextNode(p.name)),
+        h('td', { 'data-label': '每日投入', class: 'num', text: formatMoney(p.daily) }),
+        h('td', { 'data-label': '年化收益率', class: 'num', text: formatRateDecimal(p.annualRate) }),
+        etaCell(eta),
+        h('td', { 'data-label': '操作', style: 'text-align:right' },
+          h('button', {
+            class: 'link-btn', type: 'button', text: '编辑',
+            onclick: function () { openPlanDialog({ editId: p.id }); }
+          }),
+          h('button', {
+            class: 'link-btn danger', type: 'button', text: '删除',
+            onclick: function () { deletePlan(p.id); }
+          })
+        )
+      ));
+    });
+    wrap.appendChild(h('div', { class: 'table-scroll' },
+      h('table', { class: 'data-table' },
+        h('thead', null, h('tr', null,
+          h('th', { text: '方案' }), h('th', { text: '每日投入' }), h('th', { text: '年化收益率' }), h('th', { text: '预计达成' }), h('th', { text: '操作', style: 'text-align:right' })
+        )),
+        tbody
+      )
+    ));
+
+    if (!app.state.plans.length) {
+      wrap.appendChild(h('p', { class: 'footnote', text: '还没有方案。点右上角“新增方案”，对比不同日投与收益率。' }));
+    }
+
+    var dateInput = $('#reverse-date');
+    if (!dateInput.value) {
+      dateInput.value = app.derived.status === 'active' && app.derived.eta && app.derived.eta.targetDate
+        ? app.derived.eta.targetDate
+        : addDays(app.today, 1826);
+    }
+    dateInput.min = addDays(app.today, 1);
+    dateInput.max = addDays(app.today, MAX_DAYS);
+    var targetInput = $('#reverse-target');
+    if (!targetInput.value) targetInput.value = String(g.targetAmount);
+
+    renderCompareLegend();
+    setTimeout(renderCompareChart, 0);
+    renderReverseResult();
+  }
+
+  function renderCompareLegend() {
+    var legend = $('#compare-legend');
+    legend.textContent = '';
+    if (app.derived.model && app.derived.model.balanceToday < app.state.goal.targetAmount - 1e-9) {
+      var sw = h('i', { class: 'legend-swatch' });
+      sw.style.borderTopColor = 'var(--accent)';
+      legend.appendChild(h('span', { class: 'legend-item' }, sw, document.createTextNode('当前计划')));
+    }
+    app.state.plans.forEach(function (p) {
+      var sw = h('i', { class: 'legend-swatch' });
+      sw.style.borderTopColor = p.color;
+      legend.appendChild(h('span', { class: 'legend-item' }, sw, document.createTextNode(p.name)));
+    });
+  }
+
+  function renderCompareChart() {
+    var container = $('#chart-compare');
+    if (!container) return;
+    var chart = buildCompareChart(app.state, app.derived);
+    app.chartModels.compare = chart;
+    if (!chart) { container.textContent = ''; return; }
+    renderChart(container, chart);
+  }
+
+  function renderReverseResult() {
+    var box = $('#reverse-result');
+    if (!box) return;
+    var g = app.state.goal;
+    var d = app.derived;
+    var date = $('#reverse-date').value;
+    var target = parseAmount($('#reverse-target').value);
+    box.textContent = '';
+    if (!d.model) return;
+    if (!isValidDateKey(date)) {
+      box.appendChild(h('p', { class: 'muted small', text: '请选择目标日期。' }));
+      return;
+    }
+    if (!(target > 0)) {
+      box.appendChild(h('p', { class: 'muted small', text: '请输入有效的目标金额。' }));
+      return;
+    }
+    var res = reverseContribution({
+      targetAmount: target,
+      currentBalance: d.model.balanceToday,
+      annualRate: g.annualRate,
+      fromDate: app.today,
+      targetDate: date
+    });
+    if (!res.ok) {
+      box.appendChild(h('p', { class: 'hint', text: res.error }));
+      return;
+    }
+    if (res.alreadyMet) {
+      box.appendChild(h('p', { class: 'reverse-big', text: '无需追加投入' }));
+      box.appendChild(h('p', { class: 'reverse-sub', text: '按当前推算余额，已可覆盖该目标金额。' }));
+      return;
+    }
+    var dailyText = res.daily < 0.005 ? '不足 ¥0.01' : formatMoney(res.daily);
+    box.appendChild(h('p', { class: 'muted small', text: '在 ' + formatDateCN(date) + ' 前达成，需每日投入' }));
+    box.appendChild(h('p', { class: 'reverse-big', text: dailyText + ' / 天' }));
+    box.appendChild(h('p', { class: 'reverse-sub', text: '约 ' + formatMoney(res.weekly) + ' / 周 · ' + formatMoney(res.monthly) + ' / 月（按 365/12 天折算，仅供参考）' }));
+    box.appendChild(h('p', { class: 'footnote', text: '以今日推算余额 ' + formatMoney(d.model.balanceToday) + ' 为本金，年化 ' + formatRateDecimal(g.annualRate) + '。' }));
+  }
+
+  function renderSettings() {
+    var g = app.state.goal;
+    if (!g) return;
+    var dl = $('#settings-goal-summary');
+    dl.textContent = '';
+    function row(label, value) {
+      dl.appendChild(h('div', null, h('dt', { text: label }), h('dd', { text: value })));
+    }
+    row('目标金额', formatMoney(g.targetAmount));
+    row('当前本金', formatMoney(g.initialPrincipal));
+    row('开始日期', formatDateCN(g.startDate));
+    row('每日投入', formatMoney(g.plannedDaily));
+    row('年化收益率', formatRateDecimal(g.annualRate));
+    $('#about-schema').textContent = '数据结构版本 schemaVersion ' + SCHEMA_VERSION + ' · 数据仅保存在本浏览器 localStorage 中。';
+  }
+
+  var THEME_ICON_MOON = '<path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>';
+  var THEME_ICON_SUN = '<circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>';
+
+  function updateThemeIcon() {
+    var theme = app.state ? app.state.settings.theme : 'light';
+    var btn = $('#btn-theme');
+    if (btn) btn.setAttribute('aria-label', theme === 'dark' ? '切换到浅色模式' : '切换到深色模式');
+    var icon = $('#icon-theme');
+    if (icon) icon.innerHTML = theme === 'dark' ? THEME_ICON_SUN : THEME_ICON_MOON;
+  }
+
+  /* ============================================================
+   * 7. dialogs and actions
+   * ============================================================ */
+  function showFormError(sel, msg) {
+    var node = $(sel);
+    node.textContent = msg;
+    node.hidden = !msg;
+  }
+
+  function openWithFocus(dlg, focusSel) {
+    if (dlg.open) return;
+    dlg.showModal();
+    requestAnimationFrame(function () {
+      var target = focusSel ? $(focusSel) : $('input, button', dlg);
+      if (target) target.focus();
+    });
+  }
+
+  function closeDialog(dlg) { if (dlg && dlg.open) dlg.close(); }
+
+  function toast(message) {
+    var t = $('#toast');
+    t.textContent = message;
+    t.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { t.classList.remove('show'); }, 3000);
+  }
+
+  var confirmResolve = null;
+  function confirmDialog(opts) {
+    var dlg = $('#dlg-confirm');
+    if (confirmResolve) {
+      var prev = confirmResolve;
+      confirmResolve = null;
+      prev(false);
+    }
+    $('#confirm-title').textContent = opts.title || '确认';
+    $('#confirm-body').textContent = opts.body || '';
+    var ok = $('#confirm-ok');
+    ok.textContent = opts.confirmLabel || '确定';
+    ok.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+    $('#confirm-cancel').hidden = opts.showCancel === false;
+    return new Promise(function (resolve) {
+      confirmResolve = resolve;
+      dlg.returnValue = '';
+      dlg.showModal();
+    });
+  }
+
+  function settleConfirm(value) {
+    var resolve = confirmResolve;
+    confirmResolve = null;
+    var dlg = $('#dlg-confirm');
+    if (dlg.open) {
+      try { dlg.close(value ? 'ok' : 'cancel'); } catch (e) { /* ignore */ }
+    }
+    if (resolve) resolve(value);
+  }
+
+  function showMessageDialog(title, message) {
+    return confirmDialog({ title: title, body: message, confirmLabel: '知道了', showCancel: false });
+  }
+
+  /* ----- goal ----- */
+  function openGoalDialog(opts) {
+    var edit = !!(opts && opts.edit);
+    app.ui.editingGoal = edit;
+    var g = app.state.goal;
+    $('#dlg-goal-title').textContent = edit ? '编辑目标' : '创建储蓄目标';
+    $('#g-target').value = g ? String(g.targetAmount) : '';
+    $('#g-principal').value = g ? String(g.initialPrincipal) : '';
+    var startInput = $('#g-start');
+    startInput.value = g ? g.startDate : app.today;
+    startInput.max = app.today;
+    startInput.min = '1900-01-01';
+    $('#g-daily').value = g ? String(g.plannedDaily) : '';
+    $('#g-rate').value = g ? trimNumber(g.annualRate * 100, 4) : '';
+    showFormError('#g-error', '');
+    openWithFocus($('#dlg-goal'), '#g-target');
+  }
+
+  function handleGoalSubmit(e) {
+    e.preventDefault();
+    var target = parseAmount($('#g-target').value);
+    var principal = parseAmount($('#g-principal').value);
+    var start = $('#g-start').value;
+    var daily = parseAmount($('#g-daily').value);
+    var rate = parseRate($('#g-rate').value);
+    var errors = [];
+    if (!(target > 0)) errors.push('目标金额必须大于 0。');
+    if (!(principal >= 0)) errors.push('当前本金不能为负数。');
+    if (!isValidDateKey(start)) errors.push('请选择有效的开始日期。');
+    else if (start > app.today) errors.push('开始日期不能晚于今天。');
+    else if (start < '1900-01-01') errors.push('开始日期不能早于 1900 年。');
+    if (!(daily >= 0)) errors.push('每日投入不能为负数。');
+    if (!(rate > -1)) errors.push('年化收益率必须大于 -100%。');
+    if (errors.length) { showFormError('#g-error', errors[0]); return; }
+
+    var newGoal = {
+      targetAmount: round2(target),
+      initialPrincipal: round2(principal),
+      startDate: start,
+      plannedDaily: round2(daily),
+      annualRate: rate
+    };
+    var old = app.state.goal;
+
+    var apply = function () {
+      if (!old) {
+        app.state.goal = newGoal;
+        app.state.records = {};
+        app.state.checkIns = {};
+        app.state.plans = [];
+      } else {
+        app.state.goal = newGoal;
+      }
+      closeDialog($('#dlg-goal'));
+      app.ui.recordPage = 0;
+      commit();
+      toast(old ? '目标已更新' : '目标已创建');
+    };
+
+    if (old && start > old.startDate) {
+      var outRec = Object.keys(app.state.records).filter(function (d) { return d < start; });
+      var outChk = Object.keys(app.state.checkIns).filter(function (d) { return d < start; });
+      if (outRec.length || outChk.length) {
+        confirmDialog({
+          title: '裁剪旧数据',
+          body: '开始日期已后移。有 ' + outRec.length + ' 条投入记录和 ' + outChk.length + ' 条市值核对早于新的开始日期。继续保存将删除这些条目，且无法撤销。',
+          confirmLabel: '删除并保存',
+          danger: true
+        }).then(function (ok) {
+          if (!ok) return;
+          outRec.forEach(function (d) { delete app.state.records[d]; });
+          outChk.forEach(function (d) { delete app.state.checkIns[d]; });
+          apply();
+        });
+        return;
+      }
+    }
+    apply();
+  }
+
+  /* ----- records ----- */
+  function openRecordDialog(opts) {
+    opts = opts || {};
+    var editDate = opts.editDate || null;
+    app.ui.editingRecordDate = editDate;
+    $('#dlg-record-title').textContent = editDate ? '编辑投入记录' : (opts.backfill ? '补记投入' : '记录投入');
+    var dateInput = $('#r-date');
+    dateInput.value = editDate || opts.date || app.today;
+    dateInput.min = app.state.goal.startDate;
+    dateInput.max = app.today;
+    $('#r-amount').value = editDate ? String(app.state.records[editDate]) : '';
+    showFormError('#r-error', '');
+    openWithFocus($('#dlg-record'), '#r-amount');
+  }
+
+  function handleRecordSubmit(e) {
+    e.preventDefault();
+    var date = $('#r-date').value;
+    var amount = parseAmount($('#r-amount').value);
+    var error = '';
+    if (!isValidDateKey(date)) error = '请选择有效日期。';
+    else if (date < app.state.goal.startDate) error = '日期不能早于开始日期。';
+    else if (date > app.today) error = '日期不能晚于今天。';
+    else if (!(amount > 0)) error = '投入金额需大于 0。';
+    var editing = app.ui.editingRecordDate;
+    if (!error && has(app.state.records, date) && date !== editing) error = '该日期已有投入记录，请直接编辑该记录。';
+    if (error) { showFormError('#r-error', error); return; }
+
+    if (editing && date !== editing) delete app.state.records[editing];
+    app.state.records[date] = round2(amount);
+    closeDialog($('#dlg-record'));
+    commit();
+    toast(editing ? '记录已更新' : '已记录 ' + formatMoney(round2(amount)));
+  }
+
+  function deleteRecord(date) {
+    confirmDialog({
+      title: '删除投入记录',
+      body: '确定删除 ' + formatDateCN(date) + ' 的投入记录 ' + formatMoney(app.state.records[date]) + '？',
+      confirmLabel: '删除',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      delete app.state.records[date];
+      commit();
+      toast('记录已删除');
+    });
+  }
+
+  /* ----- check-ins ----- */
+  function updateCheckInOverlap() {
+    var date = $('#c-date').value;
+    var node = $('#c-overlap');
+    var overlap = isValidDateKey(date) && has(app.state.records, date);
+    node.hidden = !overlap;
+    node.textContent = overlap ? '该日已有投入记录；市值核对将作为当日最终余额，投入记录仍计入累计投入。' : '';
+  }
+
+  function openCheckInDialog(opts) {
+    opts = opts || {};
+    var editDate = opts.editDate || null;
+    app.ui.editingCheckInDate = editDate;
+    $('#dlg-checkin-title').textContent = editDate ? '编辑市值核对' : '市值核对';
+    var dateInput = $('#c-date');
+    dateInput.value = editDate || opts.date || app.today;
+    dateInput.min = app.state.goal.startDate;
+    dateInput.max = app.today;
+    $('#c-value').value = editDate ? String(app.state.checkIns[editDate]) : '';
+    showFormError('#c-error', '');
+    updateCheckInOverlap();
+    openWithFocus($('#dlg-checkin'), '#c-value');
+  }
+
+  function handleCheckInSubmit(e) {
+    e.preventDefault();
+    var date = $('#c-date').value;
+    var value = parseAmount($('#c-value').value);
+    var error = '';
+    if (!isValidDateKey(date)) error = '请选择有效日期。';
+    else if (date < app.state.goal.startDate) error = '日期不能早于开始日期。';
+    else if (date > app.today) error = '日期不能晚于今天。';
+    else if (!(value >= 0)) error = '实际市值不能为负数。';
+    var editing = app.ui.editingCheckInDate;
+    if (!error && has(app.state.checkIns, date) && date !== editing) error = '该日期已有市值核对，请直接编辑该条记录。';
+    if (error) { showFormError('#c-error', error); return; }
+
+    if (editing && date !== editing) delete app.state.checkIns[editing];
+    app.state.checkIns[date] = round2(value);
+    closeDialog($('#dlg-checkin'));
+    commit();
+    toast(editing ? '市值核对已更新' : '已记录市值核对');
+  }
+
+  function deleteCheckIn(date) {
+    confirmDialog({
+      title: '删除市值核对',
+      body: '确定删除 ' + formatDateCN(date) + ' 的市值核对 ' + formatMoney(app.state.checkIns[date]) + '？删除后将以更早的核对（或模型推算）为准。',
+      confirmLabel: '删除',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      delete app.state.checkIns[date];
+      commit();
+      toast('市值核对已删除');
+    });
+  }
+
+  /* ----- plans ----- */
+  function buildColorOptions(selected) {
+    var row = $('#p-colors');
+    row.textContent = '';
+    PALETTE.forEach(function (color, idx) {
+      var input = h('input', { type: 'radio', name: 'planColor', value: color, id: 'color-' + idx });
+      if (color === selected) input.checked = true;
+      var span = h('span');
+      span.style.background = color;
+      row.appendChild(h('label', { class: 'color-option', title: color }, input, span));
+    });
+  }
+
+  function openPlanDialog(opts) {
+    opts = opts || {};
+    var editId = opts.editId || null;
+    app.ui.editingPlanId = editId;
+    var plan = null;
+    if (editId) {
+      plan = app.state.plans.filter(function (p) { return p.id === editId; })[0] || null;
+    }
+    $('#dlg-plan-title').textContent = plan ? '编辑方案' : '新增方案';
+    $('#p-name').value = plan ? plan.name : '';
+    $('#p-daily').value = plan ? String(plan.daily) : '';
+    $('#p-rate').value = plan ? trimNumber(plan.annualRate * 100, 4) : '';
+    var used = app.state.plans.map(function (p) { return p.color; });
+    var defaultColor = plan ? plan.color : (PALETTE.filter(function (c) { return used.indexOf(c) === -1; })[0] || PALETTE[app.state.plans.length % PALETTE.length]);
+    buildColorOptions(defaultColor);
+    showFormError('#p-error', '');
+    openWithFocus($('#dlg-plan'), '#p-name');
+  }
+
+  function handlePlanSubmit(e) {
+    e.preventDefault();
+    var name = $('#p-name').value.trim();
+    var daily = parseAmount($('#p-daily').value);
+    var rate = parseRate($('#p-rate').value);
+    var colorInput = $('input[name="planColor"]:checked');
+    var color = colorInput ? colorInput.value : PALETTE[0];
+    var error = '';
+    if (!name || name.length > 40) error = '方案名称需为 1–40 个字符。';
+    else if (!(daily >= 0)) error = '每日投入不能为负数。';
+    else if (!(rate > -1)) error = '年化收益率必须大于 -100%。';
+    if (error) { showFormError('#p-error', error); return; }
+
+    var editId = app.ui.editingPlanId;
+    if (editId) {
+      var plan = app.state.plans.filter(function (p) { return p.id === editId; })[0];
+      if (plan) {
+        plan.name = name;
+        plan.daily = round2(daily);
+        plan.annualRate = rate;
+        plan.color = color;
+      }
+    } else {
+      if (app.state.plans.length >= MAX_PLANS) { showFormError('#p-error', '最多只能有 ' + MAX_PLANS + ' 个方案。'); return; }
+      app.state.plans.push({ id: uid('p'), name: name, daily: round2(daily), annualRate: rate, color: color });
+    }
+    closeDialog($('#dlg-plan'));
+    commit();
+    toast(editId ? '方案已更新' : '方案已添加');
+  }
+
+  function deletePlan(id) {
+    var plan = app.state.plans.filter(function (p) { return p.id === id; })[0];
+    if (!plan) return;
+    confirmDialog({
+      title: '删除方案',
+      body: '确定删除方案「' + plan.name + '」？',
+      confirmLabel: '删除',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      app.state.plans = app.state.plans.filter(function (p) { return p.id !== id; });
+      commit();
+      toast('方案已删除');
+    });
+  }
+
+  /* ----- theme ----- */
+  function applyTheme(theme) {
+    app.state.settings.theme = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', app.state.settings.theme);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', app.state.settings.theme === 'dark' ? '#0d1117' : '#f5f6f8');
+    updateThemeIcon();
+  }
+
+  function toggleTheme() {
+    applyTheme(app.state.settings.theme === 'dark' ? 'light' : 'dark');
+    persist(app.state);
+    var model = app.chartModels.main;
+    var compare = app.chartModels.compare;
+    if (app.activeTab === 'dashboard' && model) renderChart($('#chart-main'), model);
+    if (app.activeTab === 'compare' && compare) renderChart($('#chart-compare'), compare);
+  }
+
+  /* ----- export / import / clear ----- */
+  function exportBackup() {
+    if (!app.state.goal) return;
+    var data = JSON.stringify(app.state, null, 2);
+    var blob = new Blob([data], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'savings-goal-' + app.today + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    toast('备份已导出');
+  }
+
+  function importFromFile(file) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showMessageDialog('导入失败', '文件超过 5 MB。');
+      return;
+    }
+    var read = file.text ? file.text() : new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(String(fr.result)); };
+      fr.onerror = function () { reject(fr.error); };
+      fr.readAsText(file);
+    });
+    read.then(function (text) {
+      var raw;
+      try { raw = JSON.parse(text); }
+      catch (e) { showMessageDialog('导入失败', '文件不是有效的 JSON。'); return; }
+      var res = validateState(raw, { today: app.today, strictDates: true });
+      if (!res.ok) {
+        showMessageDialog('导入失败', res.errors.join('\n'));
+        return;
+      }
+      var s = res.state;
+      var summary = s.goal
+        ? '目标金额 ' + formatMoney(s.goal.targetAmount) + '，开始于 ' + formatDateCN(s.goal.startDate) + '。\n包含 ' +
+          Object.keys(s.records).length + ' 条投入记录、' + Object.keys(s.checkIns).length + ' 条市值核对、' + s.plans.length + ' 个方案。\n\n' +
+          '导入将覆盖当前全部数据，且无法撤销。建议先导出当前备份。'
+        : '备份中没有目标数据，导入后将回到创建目标页面。\n\n导入将覆盖当前全部数据，且无法撤销。';
+      confirmDialog({
+        title: '确认导入',
+        body: summary,
+        confirmLabel: '覆盖并导入',
+        danger: true
+      }).then(function (ok) {
+        if (!ok) return;
+        app.state = s;
+        applyTheme(s.settings.theme);
+        app.derived = computeDerived(app.state, app.today);
+        app.ui.recordPage = 0;
+        app.activeTab = 'dashboard';
+        persist(app.state);
+        render();
+        toast('导入成功');
+      });
+    }).catch(function () {
+      showMessageDialog('导入失败', '无法读取文件。');
+    });
+  }
+
+  function clearAllData() {
+    confirmDialog({
+      title: '清空全部数据',
+      body: '将删除目标、全部投入记录、市值核对和方案。此操作无法撤销。建议先导出备份。',
+      confirmLabel: '清空数据',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      app.state = createDefaultState(app.state.settings.theme);
+      app.derived = computeDerived(app.state, app.today);
+      app.ui.recordPage = 0;
+      app.activeTab = 'dashboard';
+      persist(app.state);
+      render();
+      toast('数据已清空');
+    });
+  }
+
+  /* ============================================================
+   * 8. event binding and init
+   * ============================================================ */
+  function switchTab(tab) {
+    app.activeTab = tab;
+    render();
+  }
+
+  function bindEvents() {
+    $$('.tab').forEach(function (t) {
+      t.addEventListener('click', function () { switchTab(t.dataset.tab); });
+      t.addEventListener('keydown', function (e) {
+        var tabs = $$('.tab');
+        var idx = tabs.indexOf(t);
+        var next = null;
+        if (e.key === 'ArrowRight') next = tabs[(idx + 1) % tabs.length];
+        else if (e.key === 'ArrowLeft') next = tabs[(idx - 1 + tabs.length) % tabs.length];
+        else if (e.key === 'Home') next = tabs[0];
+        else if (e.key === 'End') next = tabs[tabs.length - 1];
+        if (next) { e.preventDefault(); next.focus(); switchTab(next.dataset.tab); }
+      });
+    });
+
+    $('#btn-theme').addEventListener('click', toggleTheme);
+    $('#btn-theme-2').addEventListener('click', toggleTheme);
+    $('#btn-create-goal').addEventListener('click', function () { openGoalDialog({ edit: false }); });
+    $('#btn-edit-goal').addEventListener('click', function () { openGoalDialog({ edit: true }); });
+    $('#btn-record-today').addEventListener('click', function () {
+      if (has(app.state.records, app.today)) openRecordDialog({ editDate: app.today });
+      else openRecordDialog({ date: app.today });
+    });
+    $('#btn-add-record').addEventListener('click', function () { openRecordDialog({ date: app.today }); });
+    $('#btn-backfill-record').addEventListener('click', function () { openRecordDialog({ date: app.today, backfill: true }); });
+    $('#btn-checkin-today').addEventListener('click', function () {
+      if (has(app.state.checkIns, app.today)) openCheckInDialog({ editDate: app.today });
+      else openCheckInDialog({ date: app.today });
+    });
+    $('#btn-add-checkin').addEventListener('click', function () { openCheckInDialog({ date: app.today }); });
+    $('#btn-add-plan').addEventListener('click', function () { openPlanDialog({}); });
+    $('#btn-export').addEventListener('click', exportBackup);
+    $('#btn-import').addEventListener('click', function () { $('#file-import').click(); });
+    $('#btn-import-onboarding').addEventListener('click', function () { $('#file-import').click(); });
+    $('#btn-clear').addEventListener('click', clearAllData);
+
+    $('#file-import').addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      importFromFile(file);
+    });
+
+    $('#form-goal').addEventListener('submit', handleGoalSubmit);
+    $('#form-record').addEventListener('submit', handleRecordSubmit);
+    $('#form-checkin').addEventListener('submit', handleCheckInSubmit);
+    $('#form-plan').addEventListener('submit', handlePlanSubmit);
+    $('#c-date').addEventListener('change', updateCheckInOverlap);
+    $('#c-date').addEventListener('input', updateCheckInOverlap);
+
+    $$('[data-close]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var dlg = document.getElementById(btn.getAttribute('data-close'));
+        closeDialog(dlg);
+      });
+    });
+
+    $('#confirm-ok').addEventListener('click', function () { settleConfirm(true); });
+    $('#confirm-cancel').addEventListener('click', function () { settleConfirm(false); });
+    $('#dlg-confirm').addEventListener('cancel', function () { settleConfirm(false); });
+    $('#dlg-confirm').addEventListener('close', function () {
+      if (confirmResolve) settleConfirm($('#dlg-confirm').returnValue === 'ok');
+    });
+
+    $('#reverse-form').addEventListener('input', renderReverseResult);
+    $('#reverse-form').addEventListener('submit', function (e) { e.preventDefault(); renderReverseResult(); });
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) checkDayRollover();
+    });
+    window.addEventListener('focus', checkDayRollover);
+    window.addEventListener('resize', function () {
+      clearTimeout(window._chartResizeT);
+      window._chartResizeT = setTimeout(function () {
+        if (app.activeTab === 'dashboard' && app.chartModels.main) renderChart($('#chart-main'), app.chartModels.main);
+        if (app.activeTab === 'compare' && app.chartModels.compare) renderChart($('#chart-compare'), app.chartModels.compare);
+      }, 120);
+    });
+  }
+
+  function checkDayRollover() {
+    var now = todayKey();
+    if (now !== app.today) {
+      app.today = now;
+      app.derived = computeDerived(app.state, app.today);
+      render();
+    }
+  }
+
+  /* ============================================================
+   * 9. self tests + debug API
+   * ============================================================ */
+  function approx(a, b, eps) {
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    return Math.abs(a - b) <= (eps == null ? 1e-9 : eps) * (1 + Math.abs(b));
+  }
+
+  function runSelfTests() {
+    var results = [];
+    function check(name, pass, actual, expected) {
+      results.push({ name: name, pass: !!pass, actual: actual, expected: expected });
+    }
+    var FROM = '2026-10-30';
+    var R = 0.08;
+
+    check('dailyRate(8%)', approx(dailyRate(R), 0.00021087439837695992), dailyRate(R), 0.00021087439837695992);
+
+    var e = etaFrom({ startBalance: 100000, annualRate: R, dailyContribution: 100, targetAmount: 1000000, fromDate: FROM });
+    check('基准 ETA 天数', e.days === 4472, e.days, 4472);
+    check('基准 ETA 日期', e.targetDate === '2039-01-27', e.targetDate, '2039-01-27');
+    check('基准末日余额', approx(e.finalBalance, 1000080.8689781433), e.finalBalance, 1000080.8689781433);
+
+    var hs = humanSpan(FROM, '2039-01-27');
+    check('humanSpan', hs.years === 12 && hs.months === 2 && hs.days === 28, hs, { years: 12, months: 2, days: 28 });
+
+    var todayRecState = {
+      schemaVersion: 1,
+      goal: { targetAmount: 1000000, initialPrincipal: 100000, startDate: FROM, plannedDaily: 100, annualRate: R },
+      records: { '2026-10-30': 100 }, checkIns: {}, plans: [], settings: { theme: 'light' }
+    };
+    var tm = buildModel(todayRecState, FROM);
+    check('今日记录后余额', approx(tm.balanceToday, 100100), tm.balanceToday, 100100);
+    var e2 = simulateProjection({ startBalance: tm.balanceToday, annualRate: R, dailyContribution: 100, targetAmount: 1000000, fromDate: FROM });
+    check('今日记录后 ETA', e2.days === 4471 && e2.targetDate === '2039-01-26', { days: e2.days, date: e2.targetDate }, { days: 4471, date: '2039-01-26' });
+
+    var rev = reverseContribution({ targetAmount: 1000000, currentBalance: 100000, annualRate: R, fromDate: FROM, targetDate: '2032-10-30' });
+    check('反推天数', rev.days === 2192, rev.days, 2192);
+    check('反推日投', approx(rev.daily, 301.93018898201996), rev.daily, 301.93018898201996);
+    check('反推周投', approx(rev.weekly, 2113.5113228741398), rev.weekly, 2113.5113228741398);
+
+    var zero = etaFrom({ startBalance: 100000, annualRate: 0, dailyContribution: 100, targetAmount: 1000000, fromDate: FROM });
+    check('零收益 ETA', zero.days === 9000 && zero.targetDate === '2051-06-21', { days: zero.days, date: zero.targetDate }, { days: 9000, date: '2051-06-21' });
+
+    var ciState = {
+      schemaVersion: 1,
+      goal: { targetAmount: 1000000, initialPrincipal: 100000, startDate: '2026-01-01', plannedDaily: 100, annualRate: R },
+      records: { '2026-07-01': 100 }, checkIns: { '2026-06-30': 200000 }, plans: [], settings: { theme: 'light' }
+    };
+    var cm = buildModel(ciState, '2026-07-01');
+    check('核对覆盖余额', approx(cm.balanceToday, 200142.17487967538), cm.balanceToday, 200142.17487967538);
+
+    var pa = etaFrom({ startBalance: 100000, annualRate: 0.06, dailyContribution: 200, targetAmount: 1000000, fromDate: FROM });
+    check('方案 A', pa.days === 3195 && pa.targetDate === '2035-07-30', { days: pa.days, date: pa.targetDate }, { days: 3195, date: '2035-07-30' });
+    var pb = etaFrom({ startBalance: 100000, annualRate: 0.10, dailyContribution: 500, targetAmount: 1000000, fromDate: FROM });
+    check('方案 B', pb.days === 1415 && pb.targetDate === '2030-09-14', { days: pb.days, date: pb.targetDate }, { days: 1415, date: '2030-09-14' });
+
+    var un = etaFrom({ startBalance: 100000, annualRate: 0.01, dailyContribution: 0, targetAmount: 1000000, fromDate: FROM });
+    check('100 年上限', un.status === 'unreachable', un.status, 'unreachable');
+    check('闰年天数', diffDays('2028-02-28', '2028-03-01') === 2, diffDays('2028-02-28', '2028-03-01'), 2);
+    check('已达成', etaFrom({ startBalance: 1000000, annualRate: R, dailyContribution: 0, targetAmount: 1000000, fromDate: FROM }).days === 0, 'days=0', 'days=0');
+
+    var failed = results.filter(function (r) { return !r.pass; });
+    if (typeof console !== 'undefined') {
+      results.forEach(function (r) {
+        if (!r.pass) console.error('[self-test FAIL]', r.name, 'actual=', r.actual, 'expected=', r.expected);
+      });
+      console.log('[self-tests] ' + (results.length - failed.length) + '/' + results.length + ' passed');
+    }
+    return { pass: failed.length === 0, failed: failed, results: results };
+  }
+
+  /* ============================================================
+   * 10. init
+   * ============================================================ */
+  function init() {
+    var loaded = loadState();
+    app.state = loaded.state;
+    app.today = todayKey();
+    applyTheme(app.state.settings.theme);
+    app.derived = computeDerived(app.state, app.today);
+    bindEvents();
+    render();
+    if (loaded.corrupt) showBanner('本地数据无法读取，已使用空白数据。请导入备份。');
+    else if (loaded.warning) showBanner(loaded.warning);
+    updateBanner();
+    setInterval(checkDayRollover, 60000);
+  }
+
+  window.__savingsDebug = {
+    dailyRate: dailyRate,
+    simulateProjection: simulateProjection,
+    etaFrom: etaFrom,
+    reverseContribution: reverseContribution,
+    buildModel: buildModel,
+    modelBalanceAt: modelBalanceAt,
+    computeDerived: computeDerived,
+    buildMainChart: buildMainChart,
+    buildCompareChart: buildCompareChart,
+    humanSpan: humanSpan,
+    parseAmount: parseAmount,
+    parseRate: parseRate,
+    validateState: validateState,
+    runSelfTests: runSelfTests,
+    getState: function () { return app.state; },
+    getDerived: function () { return app.derived; }
+  };
+
+  init();
+})();
+</script>
+</body>
+</html>
