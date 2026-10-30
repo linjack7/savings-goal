@@ -292,6 +292,11 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
 .reverse-result { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); }
 .reverse-big { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .reverse-sub { font-size: .86rem; color: var(--muted); margin-top: 6px; }
+.freedom-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.freedom-stat { background: var(--surface-2); border-radius: 12px; padding: 12px; min-width: 0; }
+.freedom-stat .stat-label { margin-bottom: 4px; }
+.freedom-stat .stat-value { font-size: 1rem; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .freedom-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* ---------- responsive ---------- */
 @media (max-width: 980px) {
   .grid-hero, .grid-2 { grid-template-columns: minmax(0, 1fr); }
@@ -363,6 +368,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
       <button class="tab" role="tab" id="tab-dashboard" aria-controls="panel-dashboard" aria-selected="true" data-tab="dashboard" type="button">仪表盘</button>
       <button class="tab" role="tab" id="tab-records" aria-controls="panel-records" aria-selected="false" tabindex="-1" data-tab="records" type="button">投入记录</button>
       <button class="tab" role="tab" id="tab-compare" aria-controls="panel-compare" aria-selected="false" tabindex="-1" data-tab="compare" type="button">方案对比</button>
+      <button class="tab" role="tab" id="tab-freedom" aria-controls="panel-freedom" aria-selected="false" tabindex="-1" data-tab="freedom" type="button">财务自由</button>
       <button class="tab" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1" data-tab="settings" type="button">设置</button>
     </nav>
 
@@ -488,6 +494,29 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
           <label class="field"><span>目标金额</span><input type="text" inputmode="decimal" id="reverse-target" autocomplete="off" placeholder="例如 1000000"></label>
         </form>
         <div class="reverse-result" id="reverse-result"></div>
+      </article>
+    </section>
+
+    <section id="panel-freedom" class="panel" role="tabpanel" aria-labelledby="tab-freedom" hidden>
+      <article class="card">
+        <h2>财务自由本金</h2>
+        <p class="muted small" style="margin-top:6px">输入每年开销，算算需要多少本金，才能只靠资产增长覆盖支出、本金不减少。</p>
+        <form id="freedom-form" class="form-grid" novalidate>
+          <label class="field"><span>每年支出</span><input type="text" id="freedom-spend" inputmode="decimal" autocomplete="off" placeholder="例如 100000"></label>
+          <label class="field"><span>通胀率（%）</span><input type="text" id="freedom-inflation" inputmode="decimal" autocomplete="off" placeholder="0"></label>
+        </form>
+        <p class="muted small" id="freedom-rate-note"></p>
+        <p class="form-error" id="freedom-error" role="alert" hidden></p>
+        <div class="reverse-result" id="freedom-result"></div>
+      </article>
+      <article class="card">
+        <h2>计算口径</h2>
+        <ul class="muted small" style="padding-left:18px;margin-top:8px;line-height:1.8">
+          <li>永续保本：每月只取出当年支出的 1/12，本金按购买力保持不变。</li>
+          <li>年化收益率取目标设置中的值；支出每年按通胀率增长。</li>
+          <li>实际月增长率 = ((1 + 年化) ÷ (1 + 通胀))^(1/12) − 1，支出在月末取出。</li>
+          <li>不含税费与手续费；收益率是假设，实际结果会波动。</li>
+        </ul>
       </article>
     </section>
 
@@ -896,6 +925,42 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
     return { ok: true, daily: c, weekly: c * 7, monthly: c * 365 / 12, alreadyMet: false, days: n };
   }
 
+  function freedomPrincipal(opts) {
+    var annualSpend = opts.annualSpend;
+    var annualRate = opts.annualRate;
+    var inflationRate = opts.inflationRate;
+
+    if (!Number.isFinite(annualSpend) || annualSpend < 0) {
+      return { ok: false, error: '年支出不能为负数。' };
+    }
+    if (!Number.isFinite(annualRate) || annualRate <= -1) {
+      return { ok: false, error: '年化收益率必须大于 -100%。' };
+    }
+    if (!Number.isFinite(inflationRate) || inflationRate <= -1) {
+      return { ok: false, error: '通胀率必须大于 -100%。' };
+    }
+    var monthlySpend = annualSpend / 12;
+    if (annualSpend === 0) {
+      return { ok: true, required: 0, monthlySpend: 0, realMonthlyRate: 0 };
+    }
+    var g = Math.pow((1 + annualRate) / (1 + inflationRate), 1 / 12);
+    if (!(g > 1)) {
+      return {
+        ok: false,
+        reason: 'no-coverage',
+        error: '年化收益率不高于通胀率，增长无法覆盖支出。',
+        monthlySpend: monthlySpend,
+        realMonthlyRate: g - 1
+      };
+    }
+    return {
+      ok: true,
+      required: annualSpend / (12 * (g - 1)),
+      monthlySpend: monthlySpend,
+      realMonthlyRate: g - 1
+    };
+  }
+
   function buildModel(state, today) {
     var g = state.goal;
     if (!g) return { ok: false, error: '尚未设置目标。' };
@@ -1000,6 +1065,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
       records: {},
       checkIns: {},
       plans: [],
+      freedom: { annualSpend: 0, inflationRate: 0 },
       settings: { theme: theme === 'dark' ? 'dark' : 'light' }
     };
   }
@@ -1096,6 +1162,22 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
       if (raw.records && typeof raw.records === 'object' && Object.keys(raw.records).length) fail('没有目标时不能包含投入记录。');
       if (raw.checkIns && typeof raw.checkIns === 'object' && Object.keys(raw.checkIns).length) fail('没有目标时不能包含市值核对。');
       if (Array.isArray(raw.plans) && raw.plans.length) fail('没有目标时不能包含方案。');
+    }
+
+    if (raw.freedom != null) {
+      var freedom = raw.freedom;
+      if (!freedom || typeof freedom !== 'object' || Array.isArray(freedom)) {
+        fail('财务自由数据格式错误。');
+      } else {
+        var freedomErrBefore = errors.length;
+        var annualSpend = freedom.annualSpend == null ? 0 : freedom.annualSpend;
+        var inflationRate = freedom.inflationRate == null ? 0 : freedom.inflationRate;
+        if (!num(annualSpend) || annualSpend < 0) fail('年支出不能为负数。');
+        if (!num(inflationRate) || inflationRate <= -1) fail('通胀率必须大于 -100%。');
+        if (errors.length === freedomErrBefore) {
+          state.freedom = { annualSpend: round2(annualSpend), inflationRate: inflationRate };
+        }
+      }
     }
 
     var sourceOk = raw.goal == null ? true : goalValid;
@@ -1549,6 +1631,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
     if (app.activeTab === 'dashboard') renderDashboard();
     else if (app.activeTab === 'records') renderRecords();
     else if (app.activeTab === 'compare') renderCompare();
+    else if (app.activeTab === 'freedom') renderFreedom();
     else renderSettings();
   }
 
@@ -1910,6 +1993,145 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
     box.appendChild(h('p', { class: 'reverse-big', text: dailyText + ' / 天' }));
     box.appendChild(h('p', { class: 'reverse-sub', text: '约 ' + formatMoney(res.weekly) + ' / 周 · ' + formatMoney(res.monthly) + ' / 月（按 365/12 天折算，仅供参考）' }));
     box.appendChild(h('p', { class: 'footnote', text: '以今日推算余额 ' + formatMoney(d.model.balanceToday) + ' 为本金，年化 ' + formatRateDecimal(g.annualRate) + '。' }));
+  }
+
+  function renderFreedom() {
+    var g = app.state.goal;
+    if (!g) return;
+    var f = app.state.freedom || { annualSpend: 0, inflationRate: 0 };
+    var spendInput = $('#freedom-spend');
+    var inflInput = $('#freedom-inflation');
+    if (document.activeElement !== spendInput) spendInput.value = f.annualSpend ? String(f.annualSpend) : '';
+    if (document.activeElement !== inflInput) inflInput.value = f.inflationRate ? trimNumber(f.inflationRate * 100, 4) : '';
+    $('#freedom-rate-note').textContent = '按目标设置里的年化收益率 ' + formatRateDecimal(g.annualRate) + ' 计算；可在设置中修改。';
+    showFormError('#freedom-error', '');
+    renderFreedomResult();
+  }
+
+  function readFreedomInputs() {
+    var spendRaw = $('#freedom-spend').value;
+    var inflRaw = $('#freedom-inflation').value;
+    return {
+      annualSpend: spendRaw.trim() === '' ? 0 : parseAmount(spendRaw),
+      inflationRate: inflRaw.trim() === '' ? 0 : parseRate(inflRaw)
+    };
+  }
+
+  function renderFreedomResult() {
+    var box = $('#freedom-result');
+    var g = app.state.goal;
+    if (!box || !g) return;
+    var input = readFreedomInputs();
+    box.textContent = '';
+
+    if (!Number.isFinite(input.annualSpend) || input.annualSpend < 0) {
+      box.appendChild(h('p', { class: 'hint', text: '年支出需为不小于 0 的金额。' }));
+      return;
+    }
+    if (!Number.isFinite(input.inflationRate) || input.inflationRate <= -1) {
+      box.appendChild(h('p', { class: 'hint', text: '通胀率必须大于 -100%。' }));
+      return;
+    }
+    var res = freedomPrincipal({
+      annualSpend: input.annualSpend,
+      annualRate: g.annualRate,
+      inflationRate: input.inflationRate
+    });
+    if (!res.ok) {
+      box.appendChild(h('p', { class: 'reverse-big', text: '无法覆盖' }));
+      box.appendChild(h('p', { class: 'hint', text: res.error + ' 可提高目标年化收益率，或降低通胀假设。' }));
+      return;
+    }
+    if (input.annualSpend === 0) {
+      box.appendChild(h('p', { class: 'muted small', text: '输入每年支出后，会在这里显示所需本金。' }));
+      return;
+    }
+
+    box.appendChild(h('p', { class: 'muted small', text: '所需本金' }));
+    box.appendChild(h('p', { class: 'big-number', text: formatMoney(res.required) }));
+    box.appendChild(h('p', { class: 'reverse-sub', text: '第一年每月可取 ' + formatMoney(res.monthlySpend) + '，之后随通胀增长。' }));
+
+    var balance = app.derived.model ? app.derived.model.balanceToday : 0;
+    var ratio = res.required > 0 ? balance / res.required : 1;
+    var gap = Math.max(0, res.required - balance);
+    var fill = h('span');
+    fill.style.width = Math.max(0, Math.min(100, ratio * 100)) + '%';
+    box.appendChild(h('div', { class: 'progress' },
+      h('div', { class: 'progress-bar', 'aria-hidden': 'true' }, fill),
+      h('span', { class: 'progress-label', text: (ratio * 100).toFixed(1) + '%' })
+    ));
+
+    function tile(label, value) {
+      return h('div', { class: 'freedom-stat' },
+        h('p', { class: 'stat-label', text: label }),
+        h('p', { class: 'stat-value', text: value })
+      );
+    }
+    box.appendChild(h('div', { class: 'freedom-stats' },
+      tile('当前推算余额', formatMoney(balance)),
+      tile('缺口', gap > 0 ? formatMoney(gap) : '已覆盖'),
+      tile('覆盖率', (ratio * 100).toFixed(1) + '%'),
+      tile('每月可取', formatMoney(res.monthlySpend))
+    ));
+
+    if (gap <= 0) {
+      box.appendChild(h('p', { class: 'reverse-sub', text: '已覆盖：当前推算余额可以支撑这套支出。' }));
+      return;
+    }
+
+    var eta = simulateProjection({
+      startBalance: balance,
+      annualRate: g.annualRate,
+      dailyContribution: g.plannedDaily,
+      targetAmount: res.required,
+      fromDate: app.today
+    });
+    if (eta.status === 'reached') {
+      var span = humanSpan(app.today, eta.targetDate);
+      box.appendChild(h('p', { class: 'reverse-sub', text: '按当前计划（日投 ' + formatMoney(g.plannedDaily) + '），还需 ' + formatDuration(span) + '，预计 ' + formatDateCN(eta.targetDate) + ' 达到。' }));
+    } else {
+      box.appendChild(h('p', { class: 'hint', text: '按当前计划（日投 ' + formatMoney(g.plannedDaily) + '），100 年内无法达到这个本金。' }));
+    }
+    box.appendChild(h('div', { class: 'btn-row' },
+      h('button', {
+        class: 'btn btn-primary', type: 'button', text: '设为目标金额',
+        onclick: function () { setFreedomAsGoal(res.required); }
+      })
+    ));
+  }
+
+  function persistFreedomInputs() {
+    if (!app.state.goal) return;
+    var input = readFreedomInputs();
+    if (!Number.isFinite(input.annualSpend) || input.annualSpend < 0) {
+      showFormError('#freedom-error', '年支出需为不小于 0 的金额。');
+      return;
+    }
+    if (!Number.isFinite(input.inflationRate) || input.inflationRate <= -1) {
+      showFormError('#freedom-error', '通胀率必须大于 -100%。');
+      return;
+    }
+    showFormError('#freedom-error', '');
+    app.state.freedom = {
+      annualSpend: round2(input.annualSpend),
+      inflationRate: input.inflationRate
+    };
+    persist(app.state);
+    renderFreedomResult();
+  }
+
+  function setFreedomAsGoal(required) {
+    if (!Number.isFinite(required) || required <= 0) return;
+    confirmDialog({
+      title: '设为储蓄目标',
+      body: '将目标金额改为财务自由本金 ' + formatMoney(required) + '？现有投入记录、市值核对和方案都会保留。',
+      confirmLabel: '设为目标'
+    }).then(function (ok) {
+      if (!ok) return;
+      app.state.goal.targetAmount = round2(required);
+      commit();
+      toast('目标金额已更新');
+    });
   }
 
   function renderSettings() {
@@ -2442,6 +2664,11 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
     $('#reverse-form').addEventListener('input', renderReverseResult);
     $('#reverse-form').addEventListener('submit', function (e) { e.preventDefault(); renderReverseResult(); });
 
+    $('#freedom-form').addEventListener('input', renderFreedomResult);
+    $('#freedom-form').addEventListener('submit', function (e) { e.preventDefault(); persistFreedomInputs(); });
+    $('#freedom-spend').addEventListener('change', persistFreedomInputs);
+    $('#freedom-inflation').addEventListener('change', persistFreedomInputs);
+
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) checkDayRollover();
     });
@@ -2505,6 +2732,17 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
     check('反推日投', approx(rev.daily, 301.93018898201996), rev.daily, 301.93018898201996);
     check('反推周投', approx(rev.weekly, 2113.5113228741398), rev.weekly, 2113.5113228741398);
 
+    var fp0 = freedomPrincipal({ annualSpend: 100000, annualRate: R, inflationRate: 0 });
+    check('自由本金 8%/0%', fp0.ok && approx(fp0.required, 1295196.50838701), fp0.required, 1295196.50838701);
+    var fp3 = freedomPrincipal({ annualSpend: 100000, annualRate: R, inflationRate: 0.03 });
+    check('自由本金 8%/3%', fp3.ok && approx(fp3.required, 2105441.072652727), fp3.required, 2105441.072652727);
+    var fp52 = freedomPrincipal({ annualSpend: 100000, annualRate: 0.05, inflationRate: 0.02 });
+    check('自由本金 5%/2%', fp52.ok && approx(fp52.required, 3445593.4514281508), fp52.required, 3445593.4514281508);
+    var fpNo = freedomPrincipal({ annualSpend: 100000, annualRate: 0.02, inflationRate: 0.03 });
+    check('自由本金无法覆盖', !fpNo.ok && fpNo.reason === 'no-coverage', fpNo.reason, 'no-coverage');
+    var fpZero = freedomPrincipal({ annualSpend: 0, annualRate: R, inflationRate: 0 });
+    check('自由本金零支出', fpZero.ok && fpZero.required === 0, fpZero.required, 0);
+
     var zero = etaFrom({ startBalance: 100000, annualRate: 0, dailyContribution: 100, targetAmount: 1000000, fromDate: FROM });
     check('零收益 ETA', zero.days === 9000 && zero.targetDate === '2051-06-21', { days: zero.days, date: zero.targetDate }, { days: 9000, date: '2051-06-21' });
 
@@ -2558,6 +2796,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
     simulateProjection: simulateProjection,
     etaFrom: etaFrom,
     reverseContribution: reverseContribution,
+    freedomPrincipal: freedomPrincipal,
     buildModel: buildModel,
     modelBalanceAt: modelBalanceAt,
     computeDerived: computeDerived,
