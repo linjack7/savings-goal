@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#f5f6f8">
+<meta name="theme-color" content="#f5f3ee">
 <title>储蓄目标 · 攒钱计算与追踪</title>
 <script>
 (function () {
@@ -24,50 +24,54 @@
 <style>
 /* ---------- design tokens ---------- */
 :root {
-  --bg: #f5f6f8;
-  --surface: #ffffff;
-  --surface-2: #eef1f4;
-  --text: #1b2129;
-  --muted: #5f6b7a;
-  --border: #e2e7ec;
-  --accent: #0f766e;
-  --accent-strong: #115e59;
-  --accent-soft: #e4f2f0;
-  --positive: #0f8a5f;
-  --negative: #c0392b;
-  --warning: #b45309;
-  --chart-grid: #e8ebef;
-  --chart-axis: #8792a2;
-  --chart-target: #b45309;
-  --chart-checkin: #6d28d9;
-  --chart-cross: #9aa6b4;
-  --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 28px rgba(16, 24, 40, .07);
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, .06);
-  --radius: 16px;
-  --radius-sm: 10px;
-  --maxw: 1180px;
+  --bg: #f5f3ee;
+  --surface: #fbfaf7;
+  --surface-2: #edeae2;
+  --field: #ffffff;
+  --text: #1f1d1a;
+  --muted: #6e6960;
+  --border: #e2ddd2;
+  --rule-strong: #cfc8b9;
+  --accent: #a9502f;
+  --accent-strong: #8c3f24;
+  --accent-soft: #f0e2d9;
+  --positive: #3f7355;
+  --negative: #a33a2e;
+  --warning: #8a6420;
+  --chart-grid: rgba(31, 29, 26, .07);
+  --chart-axis: #8a847a;
+  --chart-target: #8a847a;
+  --chart-checkin: #1f1d1a;
+  --chart-cross: #8a847a;
+  --shadow: 0 1px 2px rgba(31, 29, 26, .06), 0 14px 36px rgba(31, 29, 26, .10);
+  --shadow-sm: none;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --maxw: 1040px;
   color-scheme: light;
 }
 [data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface-2: #1d242d;
-  --text: #e6edf3;
-  --muted: #9aa7b4;
-  --border: #2a323c;
-  --accent: #2dd4bf;
-  --accent-strong: #5eead4;
-  --accent-soft: #123230;
-  --positive: #3fb950;
-  --negative: #f85149;
-  --warning: #d29922;
-  --chart-grid: #232b35;
-  --chart-axis: #7d8896;
-  --chart-target: #d29922;
-  --chart-checkin: #a78bfa;
-  --chart-cross: #566171;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 12px 32px rgba(0, 0, 0, .38);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
+  --bg: #1c1b18;
+  --surface: #242320;
+  --surface-2: #2c2a25;
+  --field: #26251f;
+  --text: #edeae2;
+  --muted: #a8a399;
+  --border: #35322c;
+  --rule-strong: #46423a;
+  --accent: #d98a66;
+  --accent-strong: #e8a183;
+  --accent-soft: #33261f;
+  --positive: #7fb894;
+  --negative: #e08272;
+  --warning: #c9a25e;
+  --chart-grid: rgba(237, 234, 226, .08);
+  --chart-axis: #9a948a;
+  --chart-target: #9a948a;
+  --chart-checkin: #edeae2;
+  --chart-cross: #9a948a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 18px 44px rgba(0, 0, 0, .34);
+  --shadow-sm: none;
   color-scheme: dark;
 }
 /* ---------- base ---------- */
@@ -78,9 +82,10 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  font-size: 16px;
-  line-height: 1.55;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
   transition: background-color .18s ease, color .18s ease;
 }
 h1, h2, h3, p, dl, dd, dt, ul { margin: 0; }
@@ -88,7 +93,7 @@ button, input, select { font: inherit; color: inherit; }
 a { color: var(--accent); }
 .skip-link {
   position: absolute; left: -9999px; top: 0; z-index: 100;
-  background: var(--surface); padding: 10px 16px; border-radius: 0 0 10px 0;
+  background: var(--surface); padding: 10px 16px; border-radius: 0 0 8px 0;
 }
 .skip-link:focus { left: 0; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -98,225 +103,273 @@ a { color: var(--accent); }
 /* ---------- header ---------- */
 .app-header {
   position: sticky; top: 0; z-index: 20;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 .header-inner {
-  max-width: var(--maxw); margin: 0 auto; padding: 12px 20px;
+  max-width: var(--maxw); margin: 0 auto; padding: 0 40px; height: 60px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
 }
-.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.brand-mark { width: 34px; height: 34px; flex: none; color: var(--accent); }
-.brand h1 { font-size: 1.08rem; font-weight: 700; letter-spacing: .01em; }
-.brand-sub { font-size: .78rem; color: var(--muted); }
+.brand h1 { font-size: .9375rem; font-weight: 500; letter-spacing: .1em; }
 /* ---------- layout ---------- */
-.container { max-width: var(--maxw); margin: 0 auto; padding: 24px 20px 72px; }
-.grid-hero { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 18px; margin-bottom: 18px; }
-.grid-2 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 18px; }
-.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
-.panel { display: flex; flex-direction: column; gap: 18px; }
-/* ---------- cards ---------- */
-.card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--shadow-sm); padding: 20px; min-width: 0;
-}
-.hero-card { padding: 24px; }
-.card h2 { font-size: 1.02rem; font-weight: 700; }
-.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-.eyebrow { font-size: .76rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-.big-number { font-size: clamp(2rem, 5.4vw, 3.1rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.12; font-variant-numeric: tabular-nums; }
+.container { max-width: var(--maxw); margin: 0 auto; padding: 0 40px 96px; }
+.panel { display: flex; flex-direction: column; }
+.block { padding: 40px 0; min-width: 0; }
+.block + .block { border-top: 1px solid var(--border); }
+.block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.block > h2 + .small { margin-top: 10px; }
+.block > .small + .small { margin-top: 6px; }
+.status-list + .small { margin-top: 20px; }
+.two-col { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 48px; }
+.two-col > .block + .block { border-top: 0; }
+.calc-list { margin-top: 14px; padding-left: 18px; color: var(--muted); font-size: .8125rem; line-height: 1.9; }
+/* ---------- type ---------- */
+h2 { font-size: .9375rem; font-weight: 500; letter-spacing: .01em; color: var(--text); }
+.big-number { font-size: 2rem; font-weight: 300; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+#dash-balance { font-size: clamp(2.75rem, 6.2vw, 4rem); letter-spacing: -.035em; line-height: 1.04; margin-bottom: 8px; }
 .muted { color: var(--muted); }
-.small { font-size: .82rem; }
-.hint { font-size: .85rem; color: var(--warning); margin-top: 12px; }
-.footnote { font-size: .78rem; color: var(--muted); margin-top: 10px; }
+.small { font-size: .8125rem; line-height: 1.65; }
+.hint { font-size: .8125rem; color: var(--warning); margin-top: 14px; line-height: 1.65; }
+.footnote { font-size: .75rem; color: var(--muted); margin-top: 12px; line-height: 1.65; }
+.tag { font-size: .6875rem; color: var(--muted); margin-left: 10px; }
+/* ---------- hero ---------- */
+.hero { padding: 56px 0 40px; }
+.hero + .block { border-top: 1px solid var(--border); }
+.hero-label { display: flex; align-items: center; gap: 14px; font-size: .8125rem; color: var(--muted); margin-bottom: 16px; }
+.today-status { margin-top: 6px; font-size: .875rem; color: var(--muted); }
 /* ---------- onboarding ---------- */
-.onboarding { display: flex; justify-content: center; padding: 6vh 0; }
-.onboard-card { max-width: 640px; width: 100%; padding: 36px; }
-.onboard-card h2 { font-size: clamp(1.5rem, 3.4vw, 2rem); margin-bottom: 10px; letter-spacing: -.01em; }
-.onboard-card > p.muted { margin-bottom: 22px; }
-.feature-list { display: flex; gap: 20px; list-style: none; padding: 0; margin-top: 26px; color: var(--muted); font-size: .86rem; flex-wrap: wrap; }
-.feature-list li::before { content: "✓"; color: var(--accent); margin-right: 6px; font-weight: 700; }
+.onboarding { display: flex; justify-content: center; padding: 14vh 0 10vh; }
+.onboard { max-width: 540px; width: 100%; }
+.onboard h2 { font-size: clamp(1.5rem, 3.2vw, 1.875rem); font-weight: 400; letter-spacing: -.01em; line-height: 1.35; margin-bottom: 16px; }
+.onboard p { color: var(--muted); font-size: .9375rem; line-height: 1.85; margin-bottom: 32px; max-width: 32em; }
+.onboard .btn-row { margin-top: 0; }
 /* ---------- tabs ---------- */
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+.tabs { display: flex; gap: 28px; margin: 24px 0 0; overflow-x: auto; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  appearance: none; background: none; border: 0; border-bottom: 2px solid transparent;
-  padding: 10px 16px; margin-bottom: -1px; font-weight: 600; color: var(--muted);
-  cursor: pointer; white-space: nowrap; border-radius: 8px 8px 0 0;
+  appearance: none; background: none; border: 0;
+  padding: 8px 0 12px; border-bottom: 2px solid transparent;
+  font-size: .9375rem; font-weight: 400; color: var(--muted);
+  cursor: pointer; white-space: nowrap;
+  transition: color .14s ease, border-color .14s ease;
 }
-.tab:hover { color: var(--text); background: var(--surface-2); }
-.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
 /* ---------- buttons ---------- */
 .btn {
-  appearance: none; cursor: pointer; border: 1px solid var(--border); background: var(--surface);
-  color: var(--text); padding: 9px 16px; border-radius: 10px; font-weight: 600; font-size: .92rem;
-  min-height: 40px; transition: background-color .12s ease, border-color .12s ease;
+  appearance: none; cursor: pointer; border: 1px solid var(--rule-strong); background: transparent;
+  color: var(--text); padding: 9px 18px; border-radius: var(--radius-sm);
+  font-weight: 500; font-size: .875rem; min-height: 40px; white-space: nowrap;
+  transition: background-color .14s ease, border-color .14s ease, color .14s ease;
 }
-.btn:hover { background: var(--surface-2); }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-[data-theme="dark"] .btn-primary { color: #052e2b; }
-.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
-.btn-danger { background: var(--negative); border-color: var(--negative); color: #fff; }
-.btn-danger:hover { filter: brightness(.94); }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.btn:hover { background: var(--surface-2); border-color: var(--muted); }
+.btn-primary { background: var(--text); border-color: var(--text); color: var(--bg); }
+.btn-primary:hover { background: var(--text); border-color: var(--text); filter: brightness(.86); }
+[data-theme="dark"] .btn-primary:hover { filter: brightness(1.14); }
+.btn-danger { background: transparent; border-color: color-mix(in srgb, var(--negative) 35%, var(--border)); color: var(--negative); }
+.btn-danger:hover { background: color-mix(in srgb, var(--negative) 8%, transparent); border-color: var(--negative); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+.block-head .btn, .block-head .btn-row { margin-top: 0; }
 .icon-btn {
-  appearance: none; cursor: pointer; width: 40px; height: 40px; border-radius: 50%;
-  border: 1px solid var(--border); background: var(--surface); display: grid; place-items: center;
+  appearance: none; cursor: pointer; width: 34px; height: 34px; padding: 0;
+  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted);
+  display: grid; place-items: center;
+  transition: color .14s ease, background-color .14s ease;
 }
-.icon-btn:hover { background: var(--surface-2); }
-.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn:hover { color: var(--text); background: var(--surface-2); }
+.icon-btn svg { width: 18px; height: 18px; }
 .link-btn {
-  appearance: none; background: none; border: 0; padding: 2px 4px; cursor: pointer;
-  color: var(--accent); font-weight: 600; font-size: .86rem; border-radius: 6px;
+  appearance: none; background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--muted); font-size: .8125rem; border-radius: 3px;
+  transition: color .14s ease;
 }
-.link-btn:hover { text-decoration: underline; }
+.link-btn:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .link-btn.danger { color: var(--negative); }
+.data-table td .link-btn + .link-btn { margin-left: 16px; }
+.data-table .note { display: inline-block; max-width: 7.5em; white-space: normal; vertical-align: middle; line-height: 1.5; }
 /* ---------- status / badge ---------- */
 .badge {
-  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
-  font-size: .78rem; font-weight: 700; background: var(--accent-soft); color: var(--accent);
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 0; border-radius: 0; background: none;
+  font-size: .8125rem; font-weight: 400; color: var(--muted);
 }
-.badge.warn { background: color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
-.badge.neutral { background: var(--surface-2); color: var(--muted); }
-.status-list { display: flex; flex-direction: column; gap: 16px; margin: 20px 0 14px; }
-.status-list dt { font-size: .78rem; color: var(--muted); margin-bottom: 2px; }
-.status-list dd { font-size: 1.16rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+.badge.warn { background: none; color: var(--warning); }
+.badge.warn::before { background: var(--warning); }
+.badge.neutral { background: none; color: var(--muted); }
+.badge.neutral::before { background: var(--rule-strong); }
+.status-list { display: flex; flex-direction: column; gap: 22px; }
+.status-list dt { font-size: .8125rem; color: var(--muted); margin-bottom: 4px; }
+.status-list dd { font-size: 1.125rem; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.status-list.inline { flex-direction: row; gap: 72px; flex-wrap: wrap; }
+.status-list.spec { gap: 0; }
+.status-list.spec > div {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 24px;
+  padding: 13px 0; border-bottom: 1px solid var(--border); align-items: baseline;
+}
+.status-list.spec > div:first-child { border-top: 1px solid var(--border); }
+.status-list.spec dt { margin: 0; }
+.status-list.spec dd { font-size: .9375rem; text-align: right; }
 /* ---------- progress ---------- */
-.progress { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
-.progress-bar { flex: 1; height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
-.progress-bar span { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-strong)); transition: width .4s ease; }
-.progress-label { font-size: .86rem; font-weight: 700; color: var(--muted); min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
-.today-status { margin-top: 10px; font-size: .88rem; color: var(--muted); }
+.progress { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
+.progress.stack { flex-direction: column; align-items: stretch; gap: 10px; }
+.progress-bar { flex: 1; height: 2px; border-radius: 0; background: var(--border); overflow: hidden; }
+.progress-bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s ease; }
+.progress-label { font-size: .75rem; font-weight: 400; color: var(--muted); min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+.progress.stack .progress-bar { flex: none; height: 2px; }
+.progress.stack .progress-label { min-width: 0; }
 /* ---------- stats ---------- */
-.stat-label { font-size: .78rem; color: var(--muted); margin-bottom: 6px; }
-.stat-value { font-size: 1.22rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-.stat-sub { font-size: .76rem; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stat { min-width: 0; }
+.stat + .stat { border-left: 1px solid var(--border); padding-left: 24px; }
+.stat-label { font-size: .8125rem; color: var(--muted); margin-bottom: 8px; }
+.stat-value { font-size: 1.125rem; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.stat-sub { font-size: .75rem; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; line-height: 1.65; }
 .positive { color: var(--positive); }
 .negative { color: var(--negative); }
 /* ---------- forms ---------- */
-.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
-.field { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
-.field > span, .field > label { font-size: .84rem; font-weight: 600; color: var(--muted); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 24px; }
+.field { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.field > span, .field > label { font-size: .8125rem; font-weight: 400; color: var(--muted); }
 .field input {
-  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
-  background: var(--surface); min-height: 42px;
+  width: 100%; padding: 10px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--rule-strong); background: var(--field); min-height: 44px;
+  font-size: .9375rem; transition: border-color .14s ease;
 }
-.field input:focus { border-color: var(--accent); }
-.field .field-hint { font-size: .76rem; color: var(--muted); }
+.field input:hover { border-color: var(--muted); }
+.field input:focus { border-color: var(--text); outline: none; }
+.field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.field .field-hint { font-size: .75rem; color: var(--muted); }
 .form-error {
-  margin-top: 12px; padding: 9px 12px; border-radius: 10px; font-size: .86rem;
-  background: color-mix(in srgb, var(--negative) 12%, transparent); color: var(--negative);
+  margin-top: 14px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: .8125rem;
+  background: color-mix(in srgb, var(--negative) 7%, transparent); color: var(--negative);
+  border: 1px solid color-mix(in srgb, var(--negative) 20%, transparent);
 }
-.form-hint { font-size: .8rem; color: var(--warning); margin-top: 10px; }
+.form-hint { font-size: .8125rem; color: var(--warning); margin-top: 12px; }
 /* ---------- tables ---------- */
 .table-scroll { overflow-x: auto; }
-.data-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-.data-table th, .data-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.data-table th { font-size: .76rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.data-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.data-table th, .data-table td { text-align: left; padding: 13px 14px 13px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table th { font-size: .75rem; color: var(--muted); font-weight: 400; padding-top: 0; padding-bottom: 10px; }
 .data-table tr:last-child td { border-bottom: 0; }
-.data-table .num { font-variant-numeric: tabular-nums; }
+.data-table .num { font-variant-numeric: tabular-nums; text-align: right; }
 .data-table tr.baseline-row td { background: var(--accent-soft); }
-.data-table tr.baseline-row td:first-child { border-radius: 10px 0 0 10px; }
-.data-table tr.baseline-row td:last-child { border-radius: 0 10px 10px 0; }
-.color-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
-.pager { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; font-size: .84rem; color: var(--muted); }
-.empty-note { padding: 26px 8px; text-align: center; color: var(--muted); font-size: .9rem; }
+.data-table tr.baseline-row td:first-child { padding-left: 12px; }
+.data-table tr.baseline-row td:last-child { padding-right: 12px; }
+.color-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; vertical-align: 1px; }
+.pager { display: flex; align-items: center; justify-content: flex-end; gap: 18px; margin-top: 18px; font-size: .8125rem; color: var(--muted); }
+.empty-note { padding: 32px 0; text-align: left; color: var(--muted); font-size: .875rem; }
 /* ---------- chart ---------- */
-.chart-card { padding-bottom: 16px; }
-.chart-wrap { position: relative; width: 100%; min-height: 120px; touch-action: pan-y; }
+.chart-block { padding-bottom: 48px; }
+.chart-wrap { position: relative; width: 100%; min-height: 120px; touch-action: pan-y; margin-top: 18px; }
 .chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
-.chart-empty { padding: 30px 8px; text-align: center; }
-.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); }
-.legend-item { display: inline-flex; align-items: center; gap: 6px; }
-.legend-swatch { width: 18px; height: 0; border-top: 2px solid currentColor; display: inline-block; }
+.chart-empty { padding: 40px 0; text-align: left; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-size: .75rem; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: 7px; }
+.legend-swatch { width: 16px; height: 0; border-top: 1.5px solid currentColor; display: inline-block; }
 .legend-swatch.dashed { border-top-style: dashed; }
-.legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.legend-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .grid-line { stroke: var(--chart-grid); stroke-width: 1; }
 .axis-label { fill: var(--chart-axis); font-size: 11px; font-variant-numeric: tabular-nums; }
-.series-line { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.series-line { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
 .series-baseline { stroke: var(--accent); }
-.series-projection { stroke-dasharray: 6 5; }
-.target-line { stroke: var(--chart-target); stroke-width: 1.4; stroke-dasharray: 3 5; }
+.series-projection { stroke-dasharray: 4 5; }
+.target-line { stroke: var(--chart-target); stroke-width: 1; stroke-dasharray: 2 4; }
 .target-label {
-  fill: var(--chart-target); font-size: 11px; font-weight: 700;
-  paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round;
+  fill: var(--chart-target); font-size: 11px; font-weight: 400;
+  paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round;
 }
-.checkin-dot { fill: var(--surface); stroke: var(--chart-checkin); stroke-width: 2; }
-.checkin-ring { fill: none; stroke: var(--chart-checkin); stroke-width: 1.4; opacity: .55; }
-.hover-cross { stroke: var(--chart-cross); stroke-width: 1; stroke-dasharray: 3 3; }
-.hover-dot { stroke: var(--surface); stroke-width: 1.6; }
+.checkin-dot { fill: var(--bg); stroke: var(--chart-checkin); stroke-width: 1.6; }
+.checkin-ring { fill: none; stroke: var(--chart-checkin); stroke-width: 1; opacity: .35; }
+.hover-cross { stroke: var(--chart-cross); stroke-width: 1; stroke-dasharray: 2 4; }
+.hover-dot { stroke: var(--bg); stroke-width: 2; }
 .chart-tooltip {
-  position: absolute; z-index: 5; pointer-events: none; min-width: 150px; max-width: 240px;
-  max-height: 240px; overflow: auto; background: var(--surface); color: var(--text);
-  border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow);
-  padding: 9px 11px; font-size: .78rem;
+  position: absolute; z-index: 5; pointer-events: none; min-width: 160px; max-width: 260px;
+  max-height: 260px; overflow: auto; background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow);
+  padding: 12px 14px; font-size: .75rem; line-height: 1.6;
 }
-.chart-tooltip .tt-date { font-weight: 700; margin-bottom: 6px; }
-.chart-tooltip .tt-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 0; }
-.chart-tooltip .tt-name { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
-.chart-tooltip .tt-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.chart-tooltip .tt-date { font-weight: 500; margin-bottom: 8px; color: var(--text); }
+.chart-tooltip .tt-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 2px 0; }
+.chart-tooltip .tt-name { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); }
+.chart-tooltip .tt-val { font-variant-numeric: tabular-nums; }
 /* ---------- dialogs ---------- */
 dialog {
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);
-  padding: 22px; width: min(480px, calc(100vw - 32px)); box-shadow: var(--shadow);
+  padding: 28px; width: min(440px, calc(100vw - 32px)); box-shadow: var(--shadow);
+  max-height: calc(100vh - 48px); overflow-y: auto;
 }
-dialog::backdrop { background: rgba(10, 14, 20, .48); backdrop-filter: blur(2px); }
-dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
-.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
-.mono-body { white-space: pre-line; font-size: .88rem; color: var(--muted); margin-top: 8px; }
-.color-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+dialog::backdrop { background: rgba(28, 27, 25, .35); }
+dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+.mono-body { white-space: pre-line; font-size: .8125rem; color: var(--muted); margin-top: 8px; line-height: 1.7; }
+.color-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
 .color-option { position: relative; }
 .color-option input { position: absolute; opacity: 0; pointer-events: none; }
 .color-option span {
-  display: block; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
-  border: 3px solid transparent; box-shadow: inset 0 0 0 2px var(--surface);
+  display: block; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--border); box-shadow: inset 0 0 0 2px var(--surface);
 }
 .color-option input:checked + span { border-color: var(--text); }
 .color-option input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* ---------- banner / toast ---------- */
 .banner {
-  padding: 11px 14px; border-radius: 12px; margin-bottom: 16px; font-size: .88rem;
-  background: color-mix(in srgb, var(--warning) 14%, var(--surface)); color: var(--warning);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border));
+  padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 24px; font-size: .8125rem;
+  background: color-mix(in srgb, var(--warning) 8%, transparent); color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 24%, transparent);
 }
 #toast {
-  position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 12px); z-index: 60;
-  background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px;
-  font-size: .86rem; font-weight: 600; opacity: 0; pointer-events: none;
+  position: fixed; left: 50%; bottom: 32px; transform: translate(-50%, 10px); z-index: 60;
+  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: var(--radius-sm);
+  font-size: .8125rem; opacity: 0; pointer-events: none;
   transition: opacity .18s ease, transform .18s ease; max-width: calc(100vw - 40px);
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 /* ---------- reverse ---------- */
-.reverse-result { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); }
-.reverse-big { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.reverse-sub { font-size: .86rem; color: var(--muted); margin-top: 6px; }
-.freedom-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
-.freedom-stat { background: var(--surface-2); border-radius: 12px; padding: 12px; min-width: 0; }
-.freedom-stat .stat-label { margin-bottom: 4px; }
+.reverse-result { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+.reverse-big { font-size: 1.75rem; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.reverse-sub { font-size: .875rem; color: var(--muted); margin-top: 8px; }
+.freedom-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 28px; border-top: 1px solid var(--border); }
+.freedom-stat { padding: 20px 0 0; min-width: 0; }
+.freedom-stat + .freedom-stat { border-left: 1px solid var(--border); padding-left: 20px; }
+.freedom-stat .stat-label { margin-bottom: 6px; }
 .freedom-stat .stat-value { font-size: 1rem; overflow-wrap: anywhere; }
-@media (max-width: 640px) { .freedom-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* ---------- responsive ---------- */
 @media (max-width: 980px) {
-  .grid-hero, .grid-2 { grid-template-columns: minmax(0, 1fr); }
-  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .container { padding-left: 28px; padding-right: 28px; }
+  .header-inner { padding-left: 28px; padding-right: 28px; }
+  .two-col { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .two-col > .block + .block { border-top: 1px solid var(--border); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 32px; }
+  .stat:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .freedom-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 24px; }
+  .freedom-stat:nth-child(odd) { border-left: 0; padding-left: 0; }
 }
 @media (max-width: 640px) {
-  .container { padding: 18px 14px 64px; }
-  .header-inner { padding: 10px 14px; }
-  .brand-sub { display: none; }
-  .card { padding: 16px; }
-  .hero-card, .onboard-card { padding: 20px; }
+  .container { padding: 0 20px 72px; }
+  .header-inner { padding-left: 20px; padding-right: 20px; height: 56px; }
+  .hero { padding: 40px 0 32px; }
+  .block { padding: 32px 0; }
   .form-grid { grid-template-columns: minmax(0, 1fr); }
-  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 28px; }
   .data-table thead { display: none; }
-  .data-table tr { display: block; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; padding: 8px 12px; }
-  .data-table td { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; padding: 5px 0; white-space: normal; }
-  .data-table td::before { content: attr(data-label); color: var(--muted); font-size: .78rem; flex: none; }
-  .data-table tr.baseline-row td { background: none; }
+  .data-table tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .data-table tr:last-child { border-bottom: 0; }
+  .data-table td { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; padding: 4px 0; white-space: normal; }
+  .data-table td::before { content: attr(data-label); color: var(--muted); font-size: .75rem; flex: none; }
+  .data-table td[data-label="操作"] { justify-content: flex-end; gap: 18px; }
+  .data-table td[data-label="操作"]::before { display: none; }
+  .data-table .num { text-align: right; }
   .data-table tr.baseline-row { background: var(--accent-soft); }
+  .data-table tr.baseline-row td { background: none; }
+  .data-table tr.baseline-row td:first-child { padding-left: 12px; }
+  .data-table tr.baseline-row td:last-child { padding-right: 12px; }
   .btn-row .btn { flex: 1; }
+  .tabs { gap: 20px; }
+  .status-list.inline { gap: 40px; }
+  .status-list.spec > div { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  .chart-block { padding-bottom: 40px; }
 }
 </style>
 </head>
@@ -325,15 +378,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
 <header class="app-header">
   <div class="header-inner">
     <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-        <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="2.4"/>
-        <path d="M12 25.5l5.2-6.2 4 3.6L28 15" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M24.6 15H28v3.4" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <div>
-        <h1>储蓄目标</h1>
-        <p class="brand-sub">把每一天，变成更近的一步</p>
-      </div>
+      <h1>储蓄目标</h1>
     </div>
     <button id="btn-theme" class="icon-btn" type="button" aria-label="切换到深色模式">
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" id="icon-theme">
@@ -347,19 +392,13 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
   <div id="app-banner" class="banner" hidden role="status"></div>
 
   <section id="view-onboarding" class="onboarding" hidden>
-    <div class="card hero-card onboard-card">
-      <p class="eyebrow">开始</p>
+    <div class="onboard">
       <h2>从一个清晰的目标开始</h2>
-      <p class="muted">输入目标金额、当前本金、每日投入和预期年化收益率，看看还要多久能攒到。之后可以每天记录投入、定期核对市值，让预测越来越贴近现实。</p>
+      <p>设定目标金额、当前本金、每日投入与预期年化收益率，看看还要多久能攒到。之后每天记一笔、偶尔核对市值，预测会越来越准。</p>
       <div class="btn-row">
         <button id="btn-create-goal" class="btn btn-primary" type="button">创建储蓄目标</button>
         <button id="btn-import-onboarding" class="btn" type="button">导入已有备份</button>
       </div>
-      <ul class="feature-list">
-        <li>每日记录</li>
-        <li>市值核对</li>
-        <li>方案对比</li>
-      </ul>
     </div>
   </section>
 
@@ -373,64 +412,67 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
     </nav>
 
     <section id="panel-dashboard" class="panel" role="tabpanel" aria-labelledby="tab-dashboard">
-      <div class="grid-hero">
-        <article class="card hero-card">
-          <p class="eyebrow">推算余额</p>
-          <p class="big-number" id="dash-balance">—</p>
-          <p class="muted small" id="dash-balance-exact"></p>
-          <p class="today-status" id="dash-today-status"></p>
-          <div class="progress">
-            <div class="progress-bar" aria-hidden="true"><span id="dash-progress-fill"></span></div>
-            <span class="progress-label" id="dash-progress-label">0%</span>
-          </div>
-          <div class="btn-row">
-            <button id="btn-record-today" class="btn btn-primary" type="button">记录今日投入</button>
-            <button id="btn-checkin-today" class="btn" type="button">市值核对</button>
-          </div>
-        </article>
-        <article class="card status-card">
+      <div class="hero">
+        <div class="hero-label">
+          <span>推算余额</span>
           <span class="badge" id="dash-status-badge">进行中</span>
-          <dl class="status-list">
-            <div>
-              <dt>预计达成</dt>
-              <dd id="dash-target-date">—</dd>
-            </div>
-            <div>
-              <dt>剩余时间</dt>
-              <dd id="dash-remaining">—</dd>
-            </div>
-          </dl>
-          <p class="muted small" id="dash-remaining-sub"></p>
-          <p class="muted small" id="dash-assumption"></p>
-          <p class="hint" id="dash-hint" hidden></p>
-        </article>
+        </div>
+        <p class="big-number" id="dash-balance">—</p>
+        <p class="muted small" id="dash-balance-exact"></p>
+        <p class="today-status" id="dash-today-status"></p>
+        <div class="progress stack">
+          <div class="progress-bar" aria-hidden="true"><span id="dash-progress-fill"></span></div>
+          <span class="progress-label" id="dash-progress-label">0%</span>
+        </div>
+        <div class="btn-row">
+          <button id="btn-record-today" class="btn btn-primary" type="button">记录今日投入</button>
+          <button id="btn-checkin-today" class="btn" type="button">市值核对</button>
+        </div>
       </div>
 
-      <div class="stat-grid">
-        <article class="card stat">
-          <p class="stat-label">目标金额</p>
-          <p class="stat-value" id="stat-target">—</p>
-          <p class="stat-sub" id="stat-target-sub"></p>
-        </article>
-        <article class="card stat">
-          <p class="stat-label">累计投入（含本金）</p>
-          <p class="stat-value" id="stat-invested">—</p>
-          <p class="stat-sub" id="stat-invested-sub"></p>
-        </article>
-        <article class="card stat">
-          <p class="stat-label">累计收益</p>
-          <p class="stat-value" id="stat-growth">—</p>
-          <p class="stat-sub" id="stat-growth-sub"></p>
-        </article>
-        <article class="card stat">
-          <p class="stat-label">最近市值核对</p>
-          <p class="stat-value" id="stat-checkin">尚无核对</p>
-          <p class="stat-sub" id="stat-checkin-sub">当前为模型推算</p>
-        </article>
+      <div class="block">
+        <dl class="status-list inline">
+          <div>
+            <dt>预计达成</dt>
+            <dd id="dash-target-date">—</dd>
+          </div>
+          <div>
+            <dt>剩余时间</dt>
+            <dd id="dash-remaining">—</dd>
+          </div>
+        </dl>
+        <p class="muted small" id="dash-remaining-sub"></p>
+        <p class="muted small" id="dash-assumption"></p>
+        <p class="hint" id="dash-hint" hidden></p>
       </div>
 
-      <article class="card chart-card">
-        <div class="card-head">
+      <div class="block">
+        <div class="stats">
+          <div class="stat">
+            <p class="stat-label">目标金额</p>
+            <p class="stat-value" id="stat-target">—</p>
+            <p class="stat-sub" id="stat-target-sub"></p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">累计投入（含本金）</p>
+            <p class="stat-value" id="stat-invested">—</p>
+            <p class="stat-sub" id="stat-invested-sub"></p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">累计收益</p>
+            <p class="stat-value" id="stat-growth">—</p>
+            <p class="stat-sub" id="stat-growth-sub"></p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">最近市值核对</p>
+            <p class="stat-value" id="stat-checkin">尚无核对</p>
+            <p class="stat-sub" id="stat-checkin-sub">当前为模型推算</p>
+          </div>
+        </div>
+      </div>
+
+      <section class="block chart-block">
+        <div class="block-head">
           <h2>余额轨迹</h2>
           <div class="legend">
             <span class="legend-item" style="color: var(--accent)"><i class="legend-swatch"></i>历史</span>
@@ -440,17 +482,17 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
           </div>
         </div>
         <div class="chart-wrap" id="chart-main"></div>
-        <p class="footnote">按 365 天/年折算日收益率；投入按日末计入；预测不含税费、通胀与手续费。</p>
+        <p class="footnote">按 365 天/年折算；投入按日末计入；不含税费与手续费。</p>
         <p class="footnote" id="chart-main-note"></p>
-      </article>
+      </section>
     </section>
 
     <section id="panel-records" class="panel" role="tabpanel" aria-labelledby="tab-records" hidden>
-      <div class="grid-2">
-        <article class="card">
-          <div class="card-head">
+      <div class="two-col">
+        <section class="block">
+          <div class="block-head">
             <h2>投入记录</h2>
-            <div class="btn-row" style="margin-top:0">
+            <div class="btn-row">
               <button id="btn-add-record" class="btn" type="button">记录今天</button>
               <button id="btn-backfill-record" class="btn" type="button">补记</button>
             </div>
@@ -458,35 +500,35 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
           <p class="muted small" id="records-summary"></p>
           <div id="records-table-wrap"></div>
           <div class="pager" id="records-pager"></div>
-        </article>
-        <article class="card">
-          <div class="card-head">
+        </section>
+        <section class="block">
+          <div class="block-head">
             <h2>市值核对</h2>
             <button id="btn-add-checkin" class="btn" type="button">添加核对</button>
           </div>
           <p class="muted small">最新一次核对会覆盖当日推算余额，并作为之后推算的起点。</p>
           <div id="checkins-list"></div>
-        </article>
+        </section>
       </div>
     </section>
 
     <section id="panel-compare" class="panel" role="tabpanel" aria-labelledby="tab-compare" hidden>
-      <article class="card">
-        <div class="card-head">
+      <section class="block">
+        <div class="block-head">
           <h2>方案对比</h2>
           <button id="btn-add-plan" class="btn" type="button">新增方案</button>
         </div>
         <p class="muted small">方案是假设，不会被记录；用于比较不同日投和收益率。修改目标或记录会同步影响所有方案。</p>
         <div id="plans-table-wrap"></div>
-      </article>
-      <article class="card chart-card">
-        <div class="card-head">
+      </section>
+      <section class="block chart-block">
+        <div class="block-head">
           <h2>预测曲线叠加</h2>
           <div class="legend" id="compare-legend"></div>
         </div>
         <div class="chart-wrap" id="chart-compare"></div>
-      </article>
-      <article class="card">
+      </section>
+      <section class="block">
         <h2>反推模式</h2>
         <p class="muted small">给定目标日期，算算每天需要投入多少。以今日推算余额为本金。</p>
         <form id="reverse-form" class="form-grid" novalidate>
@@ -494,13 +536,13 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
           <label class="field"><span>目标金额</span><input type="text" inputmode="decimal" id="reverse-target" autocomplete="off" placeholder="例如 1000000"></label>
         </form>
         <div class="reverse-result" id="reverse-result"></div>
-      </article>
+      </section>
     </section>
 
     <section id="panel-freedom" class="panel" role="tabpanel" aria-labelledby="tab-freedom" hidden>
-      <article class="card">
+      <section class="block">
         <h2>财务自由本金</h2>
-        <p class="muted small" style="margin-top:6px">输入每年开销，算算需要多少本金，才能只靠资产增长覆盖支出、本金不减少。</p>
+        <p class="muted small">输入每年开销，算算需要多少本金，才能只靠资产增长覆盖支出、本金不减少。</p>
         <form id="freedom-form" class="form-grid" novalidate>
           <label class="field"><span>每年支出</span><input type="text" id="freedom-spend" inputmode="decimal" autocomplete="off" placeholder="例如 100000"></label>
           <label class="field"><span>通胀率（%）</span><input type="text" id="freedom-inflation" inputmode="decimal" autocomplete="off" placeholder="0"></label>
@@ -508,56 +550,47 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
         <p class="muted small" id="freedom-rate-note"></p>
         <p class="form-error" id="freedom-error" role="alert" hidden></p>
         <div class="reverse-result" id="freedom-result"></div>
-      </article>
-      <article class="card">
-        <h2>计算口径</h2>
-        <ul class="muted small" style="padding-left:18px;margin-top:8px;line-height:1.8">
-          <li>永续保本：每月只取出当年支出的 1/12，本金按购买力保持不变。</li>
-          <li>年化收益率取目标设置中的值；支出每年按通胀率增长。</li>
-          <li>实际月增长率 = ((1 + 年化) ÷ (1 + 通胀))^(1/12) − 1，支出在月末取出。</li>
-          <li>不含税费与手续费；收益率是假设，实际结果会波动。</li>
-        </ul>
-      </article>
+      </section>
     </section>
 
     <section id="panel-settings" class="panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
-      <article class="card">
-        <div class="card-head">
+      <section class="block">
+        <div class="block-head">
           <h2>目标设置</h2>
           <button id="btn-edit-goal" class="btn" type="button">编辑目标</button>
         </div>
-        <dl id="settings-goal-summary" class="status-list" style="margin:0"></dl>
-      </article>
-      <article class="card">
+        <dl id="settings-goal-summary" class="status-list spec"></dl>
+      </section>
+      <section class="block">
         <h2>数据管理</h2>
-        <p class="muted small" style="margin-top:6px">数据只保存在当前浏览器的本地存储中。换浏览器或换设备前，请先导出备份。</p>
+        <p class="muted small">数据只保存在当前浏览器的本地存储中。换浏览器或换设备前，请先导出备份。</p>
         <div class="btn-row">
           <button id="btn-export" class="btn" type="button">导出备份</button>
           <button id="btn-import" class="btn" type="button">导入备份</button>
           <button id="btn-clear" class="btn btn-danger" type="button">清空全部数据</button>
         </div>
         <input type="file" id="file-import" accept=".json,application/json" hidden>
-      </article>
-      <article class="card">
+      </section>
+      <section class="block">
         <h2>外观</h2>
         <div class="btn-row">
           <button id="btn-theme-2" class="btn" type="button">切换深浅色</button>
         </div>
-      </article>
-      <article class="card">
+      </section>
+      <section class="block">
         <h2>计算口径</h2>
-        <ul class="muted small" style="padding-left:18px;margin-top:8px;line-height:1.8">
+        <ul class="calc-list">
           <li>年化收益率按 365 天折算为日收益率：(1 + 年化)^(1/365) − 1。</li>
           <li>每日先计息、再计入当日投入；当天投入从次日起产生收益。</li>
           <li>今日的计划日投不计入预测，除非今天已有投入记录。</li>
           <li>市值核对为当日结束后真实市值，会覆盖当日推算值。</li>
           <li>预测不含税费、通胀与手续费。</li>
         </ul>
-      </article>
-      <article class="card">
+      </section>
+      <section class="block">
         <h2>关于</h2>
-        <p class="muted small" id="about-schema" style="margin-top:6px"></p>
-      </article>
+        <p class="muted small" id="about-schema"></p>
+      </section>
     </section>
   </div>
 </main>
@@ -653,7 +686,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
   var MS_DAY = 86400000;
   var PAGE_SIZE = 50;
   var MAX_PLANS = 20;
-  var PALETTE = ['#2F6FED', '#D97706', '#8B5CF6', '#DB2777', '#0891B2', '#65A30D', '#EA580C', '#475569'];
+  var PALETTE = ['#A9502F', '#4A6B84', '#7A6A45', '#7C5A78', '#3F7355', '#A67C38', '#5B6285', '#8A5A52'];
 
   var app = {
     state: null,
@@ -1455,7 +1488,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
       return;
     }
     var compact = width < 640;
-    var height = compact ? 280 : 380;
+    var height = compact ? 240 : 320;
     var m = compact ? { l: 46, r: 14, t: 16, b: 28 } : { l: 64, r: 22, t: 18, b: 34 };
     var plotW = Math.max(10, width - m.l - m.r);
     var plotH = Math.max(10, height - m.t - m.b);
@@ -1781,7 +1814,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
       });
       var table = h('table', { class: 'data-table' },
         h('thead', null, h('tr', null,
-          h('th', { text: '日期' }), h('th', { text: '金额' }), h('th', { text: '操作', style: 'text-align:right' })
+          h('th', { text: '日期' }), h('th', { text: '金额', class: 'num' }), h('th', { text: '操作', style: 'text-align:right' })
         )),
         tbody
       );
@@ -1816,11 +1849,11 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
         ct.appendChild(h('tr', null,
           h('td', { 'data-label': '日期' },
             document.createTextNode(formatDateShort(date)),
-            idx === 0 ? h('span', { class: 'badge', style: 'margin-left:8px;font-size:.68rem' }, document.createTextNode('最新')) : null
+            idx === 0 ? h('span', { class: 'tag' }, document.createTextNode('最新')) : null
           ),
           h('td', { 'data-label': '实际市值', class: 'num' },
             document.createTextNode(formatMoney(app.state.checkIns[date])),
-            overlap ? h('span', { class: 'muted small', style: 'margin-left:8px', title: '该日已有投入记录；核对值作为当日最终余额，记录仍计入累计投入。' }, document.createTextNode('同日有投入记录')) : null
+            overlap ? h('span', { class: 'muted small note', style: 'margin-left:8px', title: '该日已有投入记录；核对值作为当日最终余额，记录仍计入累计投入。' }, document.createTextNode('同日有投入记录')) : null
           ),
           h('td', { 'data-label': '操作', style: 'text-align:right' },
             h('button', {
@@ -1836,7 +1869,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
       });
       list.appendChild(h('div', { class: 'table-scroll' },
         h('table', { class: 'data-table' },
-          h('thead', null, h('tr', null, h('th', { text: '日期' }), h('th', { text: '实际市值' }), h('th', { text: '操作', style: 'text-align:right' }))),
+          h('thead', null, h('tr', null, h('th', { text: '日期' }), h('th', { text: '实际市值', class: 'num' }), h('th', { text: '操作', style: 'text-align:right' }))),
           ct
         )
       ));
@@ -1905,7 +1938,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
     wrap.appendChild(h('div', { class: 'table-scroll' },
       h('table', { class: 'data-table' },
         h('thead', null, h('tr', null,
-          h('th', { text: '方案' }), h('th', { text: '每日投入' }), h('th', { text: '年化收益率' }), h('th', { text: '预计达成' }), h('th', { text: '操作', style: 'text-align:right' })
+          h('th', { text: '方案' }), h('th', { text: '每日投入', class: 'num' }), h('th', { text: '年化收益率', class: 'num' }), h('th', { text: '预计达成' }), h('th', { text: '操作', style: 'text-align:right' })
         )),
         tbody
       )
@@ -2415,7 +2448,10 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
   function buildColorOptions(selected) {
     var row = $('#p-colors');
     row.textContent = '';
-    PALETTE.forEach(function (color, idx) {
+    var colors = PALETTE.slice();
+    // 旧方案可能保存了色板之外的颜色，保留为可选项，避免编辑时被静默重置
+    if (selected && colors.indexOf(selected) === -1) colors.unshift(selected);
+    colors.forEach(function (color, idx) {
       var input = h('input', { type: 'radio', name: 'planColor', value: color, id: 'color-' + idx });
       if (color === selected) input.checked = true;
       var span = h('span');
@@ -2495,7 +2531,7 @@ dialog h2 { font-size: 1.08rem; margin-bottom: 8px; }
     app.state.settings.theme = theme === 'dark' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', app.state.settings.theme);
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', app.state.settings.theme === 'dark' ? '#0d1117' : '#f5f6f8');
+    if (meta) meta.setAttribute('content', app.state.settings.theme === 'dark' ? '#1c1b18' : '#f5f3ee');
     updateThemeIcon();
   }
 
