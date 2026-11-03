@@ -2,9 +2,24 @@
 <html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f5f3ee">
+<meta name="description" content="按当前计划推算还要多久攒到目标，记录投入、核对市值、对比方案。">
 <title>储蓄目标 · 攒钱计算与追踪</title>
+
+<!-- PWA：装到主屏幕 -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="./icons/icon-180.png" sizes="180x180">
+<link rel="apple-touch-icon" href="./icons/icon-167.png" sizes="167x167">
+<link rel="apple-touch-icon" href="./icons/icon-152.png" sizes="152x152">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="储蓄目标">
+
+<!-- gzip 压缩，用于备份码；本地引入，保证离线可用 -->
+<script src="./vendor/pako.min.js"></script>
 <script>
 (function () {
   try {
@@ -77,7 +92,11 @@
 /* ---------- base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
 body {
   margin: 0;
   background: var(--bg);
@@ -103,8 +122,10 @@ a { color: var(--accent); }
 /* ---------- header ---------- */
 .app-header {
   position: sticky; top: 0; z-index: 20;
+  /* 状态栏区域用背景色填满（standalone 模式下状态栏透明，会透出 body 背景） */
   background: var(--bg);
   border-bottom: 1px solid var(--border);
+  padding-top: env(safe-area-inset-top);
 }
 .header-inner {
   max-width: var(--maxw); margin: 0 auto; padding: 0 40px; height: 60px;
@@ -112,7 +133,7 @@ a { color: var(--accent); }
 }
 .brand h1 { font-size: .9375rem; font-weight: 500; letter-spacing: .1em; }
 /* ---------- layout ---------- */
-.container { max-width: var(--maxw); margin: 0 auto; padding: 0 40px 96px; }
+.container { max-width: var(--maxw); margin: 0 auto; padding: 0 40px calc(96px + env(safe-area-inset-bottom)); }
 .panel { display: flex; flex-direction: column; }
 .block { padding: 40px 0; min-width: 0; }
 .block + .block { border-top: 1px solid var(--border); }
@@ -139,6 +160,9 @@ h2 { font-size: .9375rem; font-weight: 500; letter-spacing: .01em; color: var(--
 .today-status { margin-top: 6px; font-size: .875rem; color: var(--muted); }
 /* ---------- onboarding ---------- */
 .onboarding { display: flex; justify-content: center; padding: 14vh 0 10vh; }
+@supports (height: 100dvh) {
+  .onboarding { padding-top: 14dvh; }
+}
 .onboard { max-width: 540px; width: 100%; }
 .onboard h2 { font-size: clamp(1.5rem, 3.2vw, 1.875rem); font-weight: 400; letter-spacing: -.01em; line-height: 1.35; margin-bottom: 16px; }
 .onboard p { color: var(--muted); font-size: .9375rem; line-height: 1.85; margin-bottom: 32px; max-width: 32em; }
@@ -148,7 +172,7 @@ h2 { font-size: .9375rem; font-weight: 500; letter-spacing: .01em; color: var(--
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
   appearance: none; background: none; border: 0;
-  padding: 8px 0 12px; border-bottom: 2px solid transparent;
+  padding: 12px 0 14px; border-bottom: 2px solid transparent;
   font-size: .9375rem; font-weight: 400; color: var(--muted);
   cursor: pointer; white-space: nowrap;
   transition: color .14s ease, border-color .14s ease;
@@ -159,7 +183,7 @@ h2 { font-size: .9375rem; font-weight: 500; letter-spacing: .01em; color: var(--
 .btn {
   appearance: none; cursor: pointer; border: 1px solid var(--rule-strong); background: transparent;
   color: var(--text); padding: 9px 18px; border-radius: var(--radius-sm);
-  font-weight: 500; font-size: .875rem; min-height: 40px; white-space: nowrap;
+  font-weight: 500; font-size: .875rem; min-height: 44px; white-space: nowrap;
   transition: background-color .14s ease, border-color .14s ease, color .14s ease;
 }
 .btn:hover { background: var(--surface-2); border-color: var(--muted); }
@@ -235,7 +259,8 @@ h2 { font-size: .9375rem; font-weight: 500; letter-spacing: .01em; color: var(--
 .field input {
   width: 100%; padding: 10px 12px; border-radius: var(--radius-sm);
   border: 1px solid var(--rule-strong); background: var(--field); min-height: 44px;
-  font-size: .9375rem; transition: border-color .14s ease;
+  /* 16px：iOS Safari 对小于 16px 的输入框会在聚焦时自动放大页面 */
+  font-size: 1rem; transition: border-color .14s ease;
 }
 .field input:hover { border-color: var(--muted); }
 .field input:focus { border-color: var(--text); outline: none; }
@@ -298,12 +323,24 @@ h2 { font-size: .9375rem; font-weight: 500; letter-spacing: .01em; color: var(--
 dialog {
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);
   padding: 28px; width: min(440px, calc(100vw - 32px)); box-shadow: var(--shadow);
-  max-height: calc(100vh - 48px); overflow-y: auto;
+  /* 100dvh 跟随 iOS 动态视口；安全区避免 Home 指示条遮挡 */
+  max-height: calc(100vh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
 }
 dialog::backdrop { background: rgba(28, 27, 25, .35); }
 dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
 .mono-body { white-space: pre-line; font-size: .8125rem; color: var(--muted); margin-top: 8px; line-height: 1.7; }
+.field textarea {
+  width: 100%; padding: 10px 12px; border-radius: var(--radius-sm); resize: vertical;
+  border: 1px solid var(--rule-strong); background: var(--field); color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .8125rem; line-height: 1.6; transition: border-color .14s ease;
+}
+.field textarea:hover { border-color: var(--muted); }
+.field textarea:focus { border-color: var(--text); outline: none; }
+.field textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .color-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
 .color-option { position: relative; }
 .color-option input { position: absolute; opacity: 0; pointer-events: none; }
@@ -320,7 +357,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
   border: 1px solid color-mix(in srgb, var(--warning) 24%, transparent);
 }
 #toast {
-  position: fixed; left: 50%; bottom: 32px; transform: translate(-50%, 10px); z-index: 60;
+  position: fixed; left: 50%; bottom: calc(32px + env(safe-area-inset-bottom)); transform: translate(-50%, 10px); z-index: 60;
   background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: var(--radius-sm);
   font-size: .8125rem; opacity: 0; pointer-events: none;
   transition: opacity .18s ease, transform .18s ease; max-width: calc(100vw - 40px);
@@ -572,6 +609,15 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
         <input type="file" id="file-import" accept=".json,application/json" hidden>
       </section>
       <section class="block">
+        <h2>备份码</h2>
+        <p class="muted small">把全部数据压缩成一串文本。换手机时在新设备上粘贴这串码即可恢复，比导出文件更方便。</p>
+        <div class="btn-row">
+          <button id="btn-copy-code" class="btn" type="button">复制备份码</button>
+          <button id="btn-restore-code" class="btn" type="button">从备份码恢复</button>
+        </div>
+        <p class="muted small" id="code-status" role="status"></p>
+      </section>
+      <section class="block">
         <h2>外观</h2>
         <div class="btn-row">
           <button id="btn-theme-2" class="btn" type="button">切换深浅色</button>
@@ -666,6 +712,21 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
   <div class="dialog-actions">
     <button id="confirm-cancel" class="btn" type="button">取消</button>
     <button id="confirm-ok" class="btn btn-primary" type="button">确定</button>
+  </div>
+</dialog>
+
+<!-- backup code restore dialog -->
+<dialog id="dlg-code" aria-labelledby="dlg-code-title">
+  <h2 id="dlg-code-title">从备份码恢复</h2>
+  <p class="muted small">粘贴之前复制的备份码。恢复会覆盖当前全部数据，且无法撤销。</p>
+  <label class="field"><span>备份码</span>
+    <textarea id="code-input" rows="5" autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="SG1."></textarea>
+  </label>
+  <p class="form-error" id="code-error" role="alert" hidden></p>
+  <div class="dialog-actions">
+    <button type="button" class="btn" data-close="dlg-code">取消</button>
+    <button id="code-ok" class="btn btn-primary" type="button">恢复</button>
   </div>
 </dialog>
 
@@ -1573,6 +1634,8 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
 
     var capture = svgEl('rect', { x: m.l, y: m.t, width: plotW, height: plotH, fill: 'transparent' });
     capture.style.cursor = 'crosshair';
+    /* 触屏：允许竖向滚动穿透，横向滑动才查看数据点 */
+    capture.style.touchAction = 'pan-y';
     svg.appendChild(capture);
 
     var tooltip = h('div', { class: 'chart-tooltip', hidden: true });
@@ -1640,6 +1703,10 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     capture.addEventListener('pointerdown', function (e) { showAt(e.clientX); });
     capture.addEventListener('pointerleave', hide);
     capture.addEventListener('pointercancel', hide);
+    /* 触屏上手指按住时 pointermove 可能被浏览器接管去滚动，用捕获阶段兜住 */
+    capture.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'touch') showAt(e.clientX);
+    }, true);
   }
 
   /* ============================================================
@@ -2257,6 +2324,130 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     return confirmDialog({ title: title, body: message, confirmLabel: '知道了', showCancel: false });
   }
 
+  /* ----- backup code (gzip + base64url) ----- */
+  var CODE_PREFIX = 'SG1.';
+
+  function bytesToBase64Url(bytes) {
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function base64UrlToBytes(text) {
+    var b64 = text.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    var bin = atob(b64);
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function encodeBackupCode(state) {
+    var json = JSON.stringify(state);
+    var compressed = pako.deflate(json);
+    return CODE_PREFIX + bytesToBase64Url(compressed);
+  }
+
+  function decodeBackupCode(text) {
+    var raw = String(text || '').trim();
+    if (raw.indexOf(CODE_PREFIX) !== 0) {
+      return { ok: false, error: '备份码应以「' + CODE_PREFIX + '」开头。' };
+    }
+    try {
+      var bytes = base64UrlToBytes(raw.slice(CODE_PREFIX.length));
+      var json = pako.inflate(bytes, { to: 'string' });
+      return { ok: true, state: JSON.parse(json) };
+    } catch (e) {
+      return { ok: false, error: '备份码无法解析，请确认是否完整复制。' };
+    }
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(function () { return legacyCopy(text); });
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
+  function copyBackupCode() {
+    if (!app.state.goal) {
+      showMessageDialog('暂无数据', '还没有创建储蓄目标，没有可备份的内容。');
+      return;
+    }
+    var code = encodeBackupCode(app.state);
+    copyText(code).then(function (ok) {
+      if (ok) {
+        toast('备份码已复制，可粘贴到微信或备忘录');
+        var el = $('#code-status');
+        if (el) el.textContent = '已复制，共 ' + code.length + ' 个字符。';
+      } else {
+        showMessageDialog('复制失败', '请手动选择并复制：\n\n' + code);
+      }
+    });
+  }
+
+  function openCodeDialog() {
+    var input = $('#code-input');
+    input.value = '';
+    showFormError('#code-error', '');
+    openWithFocus($('#dlg-code'), '#code-input');
+  }
+
+  function handleCodeRestore() {
+    var raw = $('#code-input').value;
+    if (!raw.trim()) {
+      showFormError('#code-error', '请粘贴备份码。');
+      return;
+    }
+    var decoded = decodeBackupCode(raw);
+    if (!decoded.ok) {
+      showFormError('#code-error', decoded.error);
+      return;
+    }
+    var res = validateState(decoded.state, { today: app.today, strictDates: true });
+    if (!res.ok) {
+      showFormError('#code-error', res.errors.join('\n'));
+      return;
+    }
+    var s = res.state;
+    var summary = s.goal
+      ? '目标金额 ' + formatMoney(s.goal.targetAmount) + '，开始于 ' + formatDateCN(s.goal.startDate) + '。\n包含 ' +
+        Object.keys(s.records).length + ' 条投入记录、' + Object.keys(s.checkIns).length + ' 条市值核对、' + s.plans.length + ' 个方案。\n\n' +
+        '恢复将覆盖当前全部数据，且无法撤销。'
+      : '备份码中没有目标数据，恢复后将回到创建目标页面。\n\n恢复将覆盖当前全部数据，且无法撤销。';
+    confirmDialog({
+      title: '确认恢复',
+      body: summary,
+      confirmLabel: '覆盖并恢复',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      app.state = s;
+      applyTheme(s.settings.theme);
+      app.derived = computeDerived(app.state, app.today);
+      app.ui.recordPage = 0;
+      app.activeTab = 'dashboard';
+      persist(app.state);
+      render();
+      closeDialog($('#dlg-code'));
+      toast('恢复成功');
+    });
+  }
+
   /* ----- goal ----- */
   function openGoalDialog(opts) {
     var edit = !!(opts && opts.edit);
@@ -2669,6 +2860,9 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     $('#btn-import').addEventListener('click', function () { $('#file-import').click(); });
     $('#btn-import-onboarding').addEventListener('click', function () { $('#file-import').click(); });
     $('#btn-clear').addEventListener('click', clearAllData);
+    $('#btn-copy-code').addEventListener('click', copyBackupCode);
+    $('#btn-restore-code').addEventListener('click', openCodeDialog);
+    $('#code-ok').addEventListener('click', handleCodeRestore);
 
     $('#file-import').addEventListener('change', function (e) {
       var file = e.target.files && e.target.files[0];
@@ -2724,6 +2918,15 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       app.today = now;
       app.derived = computeDerived(app.state, app.today);
       render();
+    }
+  }
+
+  /* ----- pako 自检 -----
+   * pako.min.js 由 <head> 中的 <script src> 正常加载；若部署时漏传 vendor 目录，
+   * 备份码功能会静默失效。这里在控制台留一条明确日志，便于早发现。 */
+  if (typeof pako === 'undefined' || !pako.deflate || !pako.inflate) {
+    if (typeof console !== 'undefined') {
+      console.error('[backup-code] pako 未加载，备份码功能不可用。请确认 vendor/pako.min.js 存在。');
     }
   }
 
@@ -2842,6 +3045,8 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     parseAmount: parseAmount,
     parseRate: parseRate,
     validateState: validateState,
+    encodeBackupCode: encodeBackupCode,
+    decodeBackupCode: decodeBackupCode,
     runSelfTests: runSelfTests,
     getState: function () { return app.state; },
     getDerived: function () { return app.derived; }
