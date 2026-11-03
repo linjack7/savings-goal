@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f5f3ee">
-<meta name="description" content="按当前计划推算还要多久攒到目标，记录投入、核对市值、对比方案。">
+<meta name="description" content="定一个你想攒到的数，每天记一笔，看还差多少。">
 <title>储蓄目标 · 攒钱计算与追踪</title>
 
 <!-- PWA：装到主屏幕 -->
@@ -236,6 +236,17 @@ h2 { font-size: .9375rem; font-weight: 500; letter-spacing: .01em; color: var(--
 .status-list.spec dt { margin: 0; }
 .status-list.spec dd { font-size: .9375rem; text-align: right; }
 /* ---------- progress ---------- */
+.hero-eta { display: flex; gap: 72px; flex-wrap: wrap; margin-top: 26px; }
+.hero-eta dt { font-size: .8125rem; color: var(--muted); margin-bottom: 4px; }
+.hero-eta dd { font-size: 1.125rem; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.hero-checkin-note { margin-top: 14px; }
+.goal-advanced { margin-top: 4px; }
+.goal-advanced-toggle {
+  appearance: none; background: none; border: 0; cursor: pointer;
+  padding: 0; margin: 8px 0 4px; color: var(--muted); font-size: .8125rem;
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border);
+}
+.goal-advanced-toggle:hover { color: var(--text); }
 .progress { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
 .progress.stack { flex-direction: column; align-items: stretch; gap: 10px; }
 .progress-bar { flex: 1; height: 2px; border-radius: 0; background: var(--border); overflow: hidden; }
@@ -363,6 +374,29 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
   transition: opacity .18s ease, transform .18s ease; max-width: calc(100vw - 40px);
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
+/* ---------- more ---------- */
+.more-list { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+.more-item {
+  appearance: none; background: none; border: 0; cursor: pointer;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding: 15px 0; border-bottom: 1px solid var(--border); text-align: left;
+  font-size: .9375rem; color: var(--text); min-height: 44px;
+  transition: color .14s ease;
+}
+.more-item:hover { color: var(--accent); }
+.more-item span { font-size: .8125rem; color: var(--muted); }
+.more-back {
+  appearance: none; background: none; border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0; margin: 0 0 20px; color: var(--muted); font-size: .875rem; min-height: 44px;
+  transition: color .14s ease;
+}
+.more-back:hover { color: var(--text); }
+.more-back svg { width: 16px; height: 16px; }
+.more-section-head { margin-bottom: 8px; }
+.more-section-head h2 { font-size: 1rem; }
+.more-section-head p { font-size: .8125rem; color: var(--muted); margin-top: 6px; }
+#more-section .panel { display: flex; }
 /* ---------- reverse ---------- */
 .reverse-result { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
 .reverse-big { font-size: 1.75rem; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.2; }
@@ -431,21 +465,19 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
   <section id="view-onboarding" class="onboarding" hidden>
     <div class="onboard">
       <h2>从一个清晰的目标开始</h2>
-      <p>设定目标金额、当前本金、每日投入与预期年化收益率，看看还要多久能攒到。之后每天记一笔、偶尔核对市值，预测会越来越准。</p>
+      <p>定一个你想攒到的数。<br>之后每天记一笔，看还差多少。</p>
       <div class="btn-row">
-        <button id="btn-create-goal" class="btn btn-primary" type="button">创建储蓄目标</button>
-        <button id="btn-import-onboarding" class="btn" type="button">导入已有备份</button>
+        <button id="btn-create-goal" class="btn btn-primary" type="button">定我的目标</button>
+        <button id="btn-import-onboarding" class="btn" type="button" data-import-trigger="1">导入已有备份</button>
       </div>
     </div>
   </section>
 
   <div id="app-shell" hidden>
     <nav class="tabs" role="tablist" aria-label="主导航">
-      <button class="tab" role="tab" id="tab-dashboard" aria-controls="panel-dashboard" aria-selected="true" data-tab="dashboard" type="button">仪表盘</button>
-      <button class="tab" role="tab" id="tab-records" aria-controls="panel-records" aria-selected="false" tabindex="-1" data-tab="records" type="button">投入记录</button>
-      <button class="tab" role="tab" id="tab-compare" aria-controls="panel-compare" aria-selected="false" tabindex="-1" data-tab="compare" type="button">方案对比</button>
-      <button class="tab" role="tab" id="tab-freedom" aria-controls="panel-freedom" aria-selected="false" tabindex="-1" data-tab="freedom" type="button">财务自由</button>
-      <button class="tab" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1" data-tab="settings" type="button">设置</button>
+      <button class="tab" role="tab" id="tab-dashboard" aria-controls="panel-dashboard" aria-selected="true" data-tab="dashboard" type="button">目标</button>
+      <button class="tab" role="tab" id="tab-records" aria-controls="panel-records" aria-selected="false" tabindex="-1" data-tab="records" type="button">记账</button>
+      <button class="tab" role="tab" id="tab-more" aria-controls="panel-more" aria-selected="false" tabindex="-1" data-tab="more" type="button">更多</button>
     </nav>
 
     <section id="panel-dashboard" class="panel" role="tabpanel" aria-labelledby="tab-dashboard">
@@ -461,14 +493,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
           <div class="progress-bar" aria-hidden="true"><span id="dash-progress-fill"></span></div>
           <span class="progress-label" id="dash-progress-label">0%</span>
         </div>
-        <div class="btn-row">
-          <button id="btn-record-today" class="btn btn-primary" type="button">记录今日投入</button>
-          <button id="btn-checkin-today" class="btn" type="button">市值核对</button>
-        </div>
-      </div>
-
-      <div class="block">
-        <dl class="status-list inline">
+        <dl class="hero-eta">
           <div>
             <dt>预计达成</dt>
             <dd id="dash-target-date">—</dd>
@@ -478,6 +503,14 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
             <dd id="dash-remaining">—</dd>
           </div>
         </dl>
+        <div class="btn-row">
+          <button id="btn-record-today" class="btn btn-primary" type="button">记一笔</button>
+          <button id="btn-checkin-today" class="btn" type="button">填真实余额</button>
+        </div>
+        <p class="hero-checkin-note muted small" id="dash-checkin-note"></p>
+      </div>
+
+      <div class="block">
         <p class="muted small" id="dash-remaining-sub"></p>
         <p class="muted small" id="dash-assumption"></p>
         <p class="hint" id="dash-hint" hidden></p>
@@ -485,11 +518,6 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
 
       <div class="block">
         <div class="stats">
-          <div class="stat">
-            <p class="stat-label">目标金额</p>
-            <p class="stat-value" id="stat-target">—</p>
-            <p class="stat-sub" id="stat-target-sub"></p>
-          </div>
           <div class="stat">
             <p class="stat-label">累计投入（含本金）</p>
             <p class="stat-value" id="stat-invested">—</p>
@@ -500,11 +528,6 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
             <p class="stat-value" id="stat-growth">—</p>
             <p class="stat-sub" id="stat-growth-sub"></p>
           </div>
-          <div class="stat">
-            <p class="stat-label">最近市值核对</p>
-            <p class="stat-value" id="stat-checkin">尚无核对</p>
-            <p class="stat-sub" id="stat-checkin-sub">当前为模型推算</p>
-          </div>
         </div>
       </div>
 
@@ -512,10 +535,8 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
         <div class="block-head">
           <h2>余额轨迹</h2>
           <div class="legend">
-            <span class="legend-item" style="color: var(--accent)"><i class="legend-swatch"></i>历史</span>
-            <span class="legend-item" style="color: var(--accent)"><i class="legend-swatch dashed"></i>预测</span>
+            <span class="legend-item" style="color: var(--accent)"><i class="legend-swatch"></i>余额</span>
             <span class="legend-item" style="color: var(--chart-target)"><i class="legend-swatch dashed"></i>目标</span>
-            <span class="legend-item" style="color: var(--chart-checkin)"><i class="legend-dot" style="background: var(--chart-checkin)"></i>市值核对</span>
           </div>
         </div>
         <div class="chart-wrap" id="chart-main"></div>
@@ -528,9 +549,9 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       <div class="two-col">
         <section class="block">
           <div class="block-head">
-            <h2>投入记录</h2>
+            <h2>记账</h2>
             <div class="btn-row">
-              <button id="btn-add-record" class="btn" type="button">记录今天</button>
+              <button id="btn-add-record" class="btn" type="button">记今天</button>
               <button id="btn-backfill-record" class="btn" type="button">补记</button>
             </div>
           </div>
@@ -540,10 +561,10 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
         </section>
         <section class="block">
           <div class="block-head">
-            <h2>市值核对</h2>
-            <button id="btn-add-checkin" class="btn" type="button">添加核对</button>
+            <h2>真实余额</h2>
+            <button id="btn-add-checkin" class="btn" type="button">填真实余额</button>
           </div>
-          <p class="muted small">最新一次核对会覆盖当日推算余额，并作为之后推算的起点。</p>
+          <p class="muted small">预测是按假设计算的。填一次账户里的真实余额，之后的推算会以此为起点，越来越贴近现实。</p>
           <div id="checkins-list"></div>
         </section>
       </div>
@@ -590,54 +611,49 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       </section>
     </section>
 
-    <section id="panel-settings" class="panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
-      <section class="block">
-        <div class="block-head">
-          <h2>目标设置</h2>
-          <button id="btn-edit-goal" class="btn" type="button">编辑目标</button>
+    <!-- ===== 更多（进阶功能入口） ===== -->
+    <div id="panel-more" class="panel" role="tabpanel" aria-labelledby="tab-more" hidden>
+      <div id="more-list">
+        <section class="block">
+          <h2>追踪</h2>
+          <p class="muted small">记录与校准。</p>
+          <div class="more-list">
+            <button class="more-item" type="button" data-more="checkins">真实余额<span>填账户实际金额，校准预测</span></button>
+          </div>
+        </section>
+        <section class="block">
+          <h2>推演</h2>
+          <p class="muted small">围绕目标金额的假设计算。</p>
+          <div class="more-list">
+            <button class="more-item" type="button" data-more="compare">方案对比<span>换日投或收益率会怎样</span></button>
+            <button class="more-item" type="button" data-more="freedom">财务自由<span>算算要攒多少才够花</span></button>
+          </div>
+        </section>
+        <section class="block">
+          <h2>应用</h2>
+          <p class="muted small">设置与数据。</p>
+          <div class="more-list">
+            <button class="more-item" type="button" data-more="settings">目标设置<span>修改目标金额与收益率</span></button>
+            <button class="more-item" type="button" data-more="data">备份与恢复<span>导出、导入、备份码、清空</span></button>
+            <button class="more-item" type="button" data-more="about">关于<span>数据说明与计算口径</span></button>
+          </div>
+        </section>
+      </div>
+
+      <div id="more-section-wrap" hidden>
+        <button class="more-back" id="btn-more-back" type="button" aria-label="返回更多">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          返回
+        </button>
+        <div id="more-section">
+          <div id="more-checkins-panel" hidden></div>
+          <div id="more-settings-panel" hidden></div>
+          <div id="more-data-panel" hidden></div>
+          <div id="more-about-panel" hidden></div>
         </div>
-        <dl id="settings-goal-summary" class="status-list spec"></dl>
-      </section>
-      <section class="block">
-        <h2>数据管理</h2>
-        <p class="muted small">数据只保存在当前浏览器的本地存储中。换浏览器或换设备前，请先导出备份。</p>
-        <div class="btn-row">
-          <button id="btn-export" class="btn" type="button">导出备份</button>
-          <button id="btn-import" class="btn" type="button">导入备份</button>
-          <button id="btn-clear" class="btn btn-danger" type="button">清空全部数据</button>
-        </div>
-        <input type="file" id="file-import" accept=".json,application/json" hidden>
-      </section>
-      <section class="block">
-        <h2>备份码</h2>
-        <p class="muted small">把全部数据压缩成一串文本。换手机时在新设备上粘贴这串码即可恢复，比导出文件更方便。</p>
-        <div class="btn-row">
-          <button id="btn-copy-code" class="btn" type="button">复制备份码</button>
-          <button id="btn-restore-code" class="btn" type="button">从备份码恢复</button>
-        </div>
-        <p class="muted small" id="code-status" role="status"></p>
-      </section>
-      <section class="block">
-        <h2>外观</h2>
-        <div class="btn-row">
-          <button id="btn-theme-2" class="btn" type="button">切换深浅色</button>
-        </div>
-      </section>
-      <section class="block">
-        <h2>计算口径</h2>
-        <ul class="calc-list">
-          <li>年化收益率按 365 天折算为日收益率：(1 + 年化)^(1/365) − 1。</li>
-          <li>每日先计息、再计入当日投入；当天投入从次日起产生收益。</li>
-          <li>今日的计划日投不计入预测，除非今天已有投入记录。</li>
-          <li>市值核对为当日结束后真实市值，会覆盖当日推算值。</li>
-          <li>预测不含税费、通胀与手续费。</li>
-        </ul>
-      </section>
-      <section class="block">
-        <h2>关于</h2>
-        <p class="muted small" id="about-schema"></p>
-      </section>
-    </section>
+      </div>
+    </div>
+
   </div>
 </main>
 
@@ -648,9 +664,12 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     <p class="muted small">所有金额单位为元。</p>
     <label class="field"><span>目标金额</span><input type="text" id="g-target" inputmode="decimal" autocomplete="off" placeholder="例如 1000000"></label>
     <label class="field"><span>当前本金</span><input type="text" id="g-principal" inputmode="decimal" autocomplete="off" placeholder="例如 100000"></label>
-    <label class="field"><span>开始日期</span><input type="date" id="g-start"></label>
     <label class="field"><span>每日投入</span><input type="text" id="g-daily" inputmode="decimal" autocomplete="off" placeholder="例如 100"></label>
-    <label class="field"><span>年化收益率（%）</span><input type="text" id="g-rate" inputmode="decimal" autocomplete="off" placeholder="例如 8"></label>
+    <div class="goal-advanced" id="goal-advanced" hidden>
+      <label class="field"><span>开始日期</span><input type="date" id="g-start"></label>
+      <label class="field"><span>年化收益率（%）</span><input type="text" id="g-rate" inputmode="decimal" autocomplete="off" placeholder="默认 5"></label>
+    </div>
+    <button class="goal-advanced-toggle" id="btn-goal-advanced" type="button" aria-expanded="false" aria-controls="goal-advanced">高级选项</button>
     <p class="form-error" id="g-error" role="alert" hidden></p>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close="dlg-goal">取消</button>
@@ -662,7 +681,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
 <!-- record dialog -->
 <dialog id="dlg-record" aria-labelledby="dlg-record-title">
   <form id="form-record" novalidate>
-    <h2 id="dlg-record-title">记录投入</h2>
+    <h2 id="dlg-record-title">记一笔</h2>
     <label class="field"><span>日期</span><input type="date" id="r-date"></label>
     <label class="field"><span>投入金额</span><input type="text" id="r-amount" inputmode="decimal" autocomplete="off" placeholder="例如 100"></label>
     <p class="form-error" id="r-error" role="alert" hidden></p>
@@ -676,10 +695,10 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
 <!-- check-in dialog -->
 <dialog id="dlg-checkin" aria-labelledby="dlg-checkin-title">
   <form id="form-checkin" novalidate>
-    <h2 id="dlg-checkin-title">市值核对</h2>
-    <p class="muted small">输入该日结束后账户的真实市值。最新一次核对将是之后推算的起点。</p>
+    <h2 id="dlg-checkin-title">填真实余额</h2>
+    <p class="muted small">填账户里实际的金额。之后推算会以此为起点，不再纯靠假设计算。</p>
     <label class="field"><span>日期</span><input type="date" id="c-date"></label>
-    <label class="field"><span>实际市值</span><input type="text" id="c-value" inputmode="decimal" autocomplete="off" placeholder="例如 105000"></label>
+    <label class="field"><span>实际金额</span><input type="text" id="c-value" inputmode="decimal" autocomplete="off" placeholder="例如 105000"></label>
     <p class="form-hint" id="c-overlap" hidden></p>
     <p class="form-error" id="c-error" role="alert" hidden></p>
     <div class="dialog-actions">
@@ -749,6 +768,8 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
   var MAX_PLANS = 20;
   var PALETTE = ['#A9502F', '#4A6B84', '#7A6A45', '#7C5A78', '#3F7355', '#A67C38', '#5B6285', '#8A5A52'];
 
+  var DEFAULT_ANNUAL_RATE = 0.05;
+
   var app = {
     state: null,
     derived: null,
@@ -759,7 +780,9 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       editingRecordDate: null,
       editingCheckInDate: null,
       editingPlanId: null,
-      recordPage: 0
+      recordPage: 0,
+      goalAdvanced: false,
+      moreSection: null
     },
     storageOk: true,
     chartModels: { main: null, compare: null }
@@ -1228,8 +1251,8 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
           target[k] = round2(v);
         });
       };
-      readDated(raw.records, '投入记录', state.records, 0.01, false);
-      readDated(raw.checkIns, '市值核对', state.checkIns, 0, true);
+      readDated(raw.records, '记账', state.records, 0.01, false);
+      readDated(raw.checkIns, '真实余额', state.checkIns, 0, true);
 
       if (raw.plans != null) {
         if (!Array.isArray(raw.plans)) fail('方案数据格式错误。');
@@ -1253,8 +1276,8 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
         }
       }
     } else {
-      if (raw.records && typeof raw.records === 'object' && Object.keys(raw.records).length) fail('没有目标时不能包含投入记录。');
-      if (raw.checkIns && typeof raw.checkIns === 'object' && Object.keys(raw.checkIns).length) fail('没有目标时不能包含市值核对。');
+      if (raw.records && typeof raw.records === 'object' && Object.keys(raw.records).length) fail('没有目标时不能包含记账。');
+      if (raw.checkIns && typeof raw.checkIns === 'object' && Object.keys(raw.checkIns).length) fail('没有目标时不能包含真实余额。');
       if (Array.isArray(raw.plans) && raw.plans.length) fail('没有目标时不能包含方案。');
     }
 
@@ -1716,6 +1739,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     var hasGoal = !!app.state.goal;
     $('#view-onboarding').hidden = hasGoal;
     $('#app-shell').hidden = !hasGoal;
+    $('#panel-more').hidden = !hasGoal;
     updateThemeIcon();
     if (!hasGoal) return;
 
@@ -1727,12 +1751,182 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     $$('.panel').forEach(function (p) {
       p.hidden = p.id !== 'panel-' + app.activeTab;
     });
+    // 不在「更多」子页时，借用的面板与子页容器必须藏回原处
+    if (app.activeTab !== 'more') {
+      ['panel-compare', 'panel-freedom'].forEach(function (id) {
+        document.getElementById(id).hidden = true;
+      });
+      MORE_SUBPANELS.forEach(function (id) {
+        var node = document.getElementById(id);
+        if (node) node.hidden = true;
+      });
+    }
+    if (app.activeTab === 'more') renderMoreList();
 
     if (app.activeTab === 'dashboard') renderDashboard();
     else if (app.activeTab === 'records') renderRecords();
-    else if (app.activeTab === 'compare') renderCompare();
-    else if (app.activeTab === 'freedom') renderFreedom();
-    else renderSettings();
+    else if (app.activeTab === 'more') renderMore();
+  }
+
+  /* ----- more ----- */
+  function renderMore() {
+    renderMoreList();
+    var inSection = !!app.ui.moreSection;
+    if (!inSection) {
+      // 纯列表视图：借用的面板藏回原处并交还 aria 归属
+      ['panel-compare', 'panel-freedom'].forEach(function (id) {
+        var panel = document.getElementById(id);
+        panel.hidden = true;
+        panel.setAttribute('aria-labelledby', id === 'panel-compare' ? 'tab-compare' : 'tab-freedom');
+      });
+      return;
+    }
+
+    if (app.ui.moreSection === 'compare') {
+      showBorrowedPanel('panel-compare');
+      renderCompare();
+      return;
+    }
+    if (app.ui.moreSection === 'freedom') {
+      showBorrowedPanel('panel-freedom');
+      renderFreedom();
+      return;
+    }
+    if (app.ui.moreSection === 'checkins') {
+      buildMoreCheckInsPanel();
+      $('#more-checkins-panel').hidden = false;
+      renderCheckInsList($('#more-checkins-list'));
+      return;
+    }
+    if (app.ui.moreSection === 'settings') {
+      buildMoreSettingsPanel();
+      $('#more-settings-panel').hidden = false;
+      renderSettings();
+      return;
+    }
+    if (app.ui.moreSection === 'data') {
+      buildMoreDataPanel();
+      $('#more-data-panel').hidden = false;
+      return;
+    }
+    if (app.ui.moreSection === 'about') {
+      buildMoreAboutPanel();
+      $('#more-about-panel').hidden = false;
+      renderAbout();
+      return;
+    }
+    app.ui.moreSection = null;
+    renderMore();
+  }
+
+  var MORE_SUBPANELS = [
+    'more-checkins-panel', 'more-settings-panel', 'more-data-panel', 'more-about-panel'
+  ];
+
+  /* 借用的面板（方案对比 / 财务自由）在 DOM 里属于 #app-shell，
+     切到「更多」时临时让它们可见，并接管 aria 归属。 */
+  function showBorrowedPanel(id) {
+    var panel = document.getElementById(id);
+    panel.hidden = false;
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', 'tab-more');
+  }
+
+  function renderMoreList() {
+    var inSection = !!app.ui.moreSection;
+    $('#more-list').hidden = inSection;
+    $('#more-section-wrap').hidden = !inSection;
+    MORE_SUBPANELS.forEach(function (id) {
+      var node = document.getElementById(id);
+      if (node) node.hidden = true;
+    });
+  }
+
+  function buildMoreCheckInsPanel() {
+    var host = $('#more-checkins-panel');
+    host.textContent = '';
+    host.appendChild(h('section', { class: 'block' },
+      h('div', { class: 'block-head' },
+        h('h2', { text: '真实余额' }),
+        h('button', {
+          id: 'btn-add-checkin-more', class: 'btn', type: 'button', text: '填真实余额',
+          onclick: function () { openCheckInDialog({ date: app.today }); }
+        })
+      ),
+      h('p', { class: 'muted small', text: '预测是按假设计算的。填一次账户里的真实余额，之后的推算会以此为起点，越来越贴近现实。' }),
+      h('div', { id: 'more-checkins-list' })
+    ));
+  }
+
+  function buildMoreSettingsPanel() {
+    var host = $('#more-settings-panel');
+    host.textContent = '';
+    host.appendChild(h('section', { class: 'block' },
+      h('div', { class: 'block-head' },
+        h('h2', { text: '目标设置' }),
+        h('button', {
+          id: 'btn-edit-goal-more', class: 'btn', type: 'button', text: '编辑目标',
+          onclick: function () { openGoalDialog({ edit: true }); }
+        })
+      ),
+      h('dl', { id: 'more-goal-summary', class: 'status-list spec' })
+    ));
+  }
+
+  function buildMoreDataPanel() {
+    var host = $('#more-data-panel');
+    host.textContent = '';
+    host.appendChild(h('section', { class: 'block' },
+      h('h2', { text: '备份与恢复' }),
+      h('p', { class: 'muted small', text: '数据只保存在当前浏览器的本地存储中。换浏览器或换设备前，请先备份。备份码是一串文本，换手机时粘贴即可恢复，比导出文件更方便。' }),
+      h('div', { class: 'btn-row' },
+        h('button', { id: 'btn-export-more', class: 'btn', type: 'button', text: '导出备份', onclick: exportBackup }),
+        h('button', { id: 'btn-copy-code-more', class: 'btn', type: 'button', text: '复制备份码', onclick: copyBackupCode }),
+        h('button', { class: 'btn', type: 'button', text: '导入备份', 'data-import-trigger': '1' }),
+        h('button', { id: 'btn-restore-code-more', class: 'btn', type: 'button', text: '从备份码恢复', onclick: openCodeDialog }),
+        h('button', { id: 'btn-clear-more', class: 'btn btn-danger', type: 'button', text: '清空全部数据', onclick: clearAllData })
+      ),
+      h('p', { class: 'muted small', id: 'code-status-more', role: 'status' }),
+      h('input', { type: 'file', id: 'file-import', accept: '.json,application/json', hidden: true })
+    ));
+  }
+
+  function buildMoreAboutPanel() {
+    var host = $('#more-about-panel');
+    host.textContent = '';
+    host.appendChild(h('section', { class: 'block' },
+      h('h2', { text: '计算口径' }),
+      h('ul', { class: 'calc-list' },
+        h('li', { text: '年化收益率按 365 天折算为日收益率：(1 + 年化)^(1/365) − 1。' }),
+        h('li', { text: '每日先计息、再计入当日投入；当天投入从次日起产生收益。' }),
+        h('li', { text: '今日的计划日投不计入预测，除非今天已有记账。' }),
+        h('li', { text: '真实余额为当日结束后的实际金额，会覆盖当日推算值。' }),
+        h('li', { text: '预测不含税费、通胀与手续费。' })
+      )
+    ));
+    host.appendChild(h('section', { class: 'block' },
+      h('h2', { text: '关于' }),
+      h('p', { class: 'muted small', id: 'about-schema-more' })
+    ));
+  }
+
+  function renderAbout() {
+    var el = $('#about-schema-more');
+    if (el) el.textContent = '数据结构版本 schemaVersion ' + SCHEMA_VERSION + ' · 数据仅保存在本浏览器 localStorage 中。';
+  }
+
+  function openMoreSection(id) {
+    app.ui.moreSection = id;
+    render();
+    var back = $('#btn-more-back');
+    if (back) back.focus();
+  }
+
+  function backFromMoreSection() {
+    app.ui.moreSection = null;
+    render();
+    var tab = $('#tab-more');
+    if (tab) tab.focus();
   }
 
   function commit() {
@@ -1759,13 +1953,14 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       $('#dash-assumption').textContent = '';
       var hnt = $('#dash-hint');
       hnt.hidden = false; hnt.textContent = d.error || '目标数据有误。';
+      $('#dash-checkin-note').textContent = '';
       renderMainChart();
       return;
     }
     var mo = d.model;
     $('#dash-balance').textContent = formatCompactMoney(mo.balanceToday);
     $('#dash-balance-exact').textContent = '精确余额 ' + formatMoney(mo.balanceToday);
-    $('#dash-today-status').textContent = mo.todayRecord != null ? '今日已投入 ' + formatMoney(mo.todayRecord) : '今天还未记录投入';
+    $('#dash-today-status').textContent = mo.todayRecord != null ? '今天已记 ' + formatMoney(mo.todayRecord) : '今天还没记账';
 
     var pct = d.progress * 100;
     $('#dash-progress-fill').style.width = Math.max(0, Math.min(100, pct)) + '%';
@@ -1804,10 +1999,8 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       $('#dash-assumption').textContent = '按计划日投 ' + formatMoney(g.plannedDaily) + '、年化 ' + formatRateDecimal(g.annualRate) + ' 推算';
     }
 
-    $('#stat-target').textContent = formatCompactMoney(g.targetAmount);
-    $('#stat-target-sub').textContent = '精确 ' + formatMoney(g.targetAmount);
     $('#stat-invested').textContent = formatMoney(mo.investedTotal);
-    $('#stat-invested-sub').textContent = '含本金 ' + formatMoney(g.initialPrincipal) + ' · ' + mo.recordedDays + ' 笔记录';
+    $('#stat-invested-sub').textContent = '含本金 ' + formatMoney(g.initialPrincipal) + ' · ' + mo.recordedDays + ' 笔记账';
 
     var growth = mo.growth;
     var growthEl = $('#stat-growth');
@@ -1817,14 +2010,12 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     $('#stat-growth-sub').textContent = '占累计投入 ' + (growthPct >= 0 ? '+' : '') + growthPct.toFixed(1) + '%';
 
     if (mo.latestCheckIn) {
-      $('#stat-checkin').textContent = formatMoney(mo.latestCheckIn.value);
-      $('#stat-checkin-sub').textContent = formatDateShort(mo.latestCheckIn.date) + ' · 已覆盖当日推算';
+      $('#dash-checkin-note').textContent = '最近一次真实余额：' + formatDateShort(mo.latestCheckIn.date) + ' · ' + formatMoney(mo.latestCheckIn.value);
     } else {
-      $('#stat-checkin').textContent = '尚无核对';
-      $('#stat-checkin-sub').textContent = '当前为模型推算';
+      $('#dash-checkin-note').textContent = '预测按假设计算，填一次真实余额会让推算更贴近现实。';
     }
 
-    $('#btn-record-today').textContent = mo.todayRecord != null ? '编辑今日投入' : '记录今日投入';
+    $('#btn-record-today').textContent = mo.todayRecord != null ? '改今天的账' : '记一笔';
 
     setTimeout(renderMainChart, 0);
   }
@@ -1837,7 +2028,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     var notes = [];
     if (chart && chart.note) notes.push(chart.note);
     if (app.derived.model && app.derived.model.recordedDays === 0) {
-      notes.push('尚无投入记录，预测完全按计划日投推算。若想计入今天的投入，请先记录。');
+      notes.push('尚无记账，预测完全按计划日投推算。若想计入今天的投入，请先记一笔。');
     }
     $('#chart-main-note').textContent = notes.join(' ');
     if (!chart) { container.textContent = ''; return; }
@@ -1854,7 +2045,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     var wrap = $('#records-table-wrap');
     wrap.textContent = '';
     if (!dates.length) {
-      wrap.appendChild(h('p', { class: 'empty-note', text: '还没有投入记录。记录第一笔，让预测更贴近现实。' }));
+      wrap.appendChild(h('p', { class: 'empty-note', text: '还没有记账。记第一笔，让预测更贴近现实。' }));
       $('#records-pager').textContent = '';
     } else {
       var pages = Math.max(1, Math.ceil(dates.length / PAGE_SIZE));
@@ -1904,11 +2095,15 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       }
     }
 
-    var list = $('#checkins-list');
+    renderCheckInsList($('#checkins-list'));
+  }
+
+  function renderCheckInsList(list) {
+    if (!list) return;
     list.textContent = '';
     var cDates = Object.keys(app.state.checkIns).sort().reverse();
     if (!cDates.length) {
-      list.appendChild(h('p', { class: 'empty-note', text: '尚无市值核对，当前使用模型推算。' }));
+      list.appendChild(h('p', { class: 'empty-note', text: '还没有真实余额。填一次，预测会以此为起点。' }));
     } else {
       var ct = h('tbody');
       cDates.forEach(function (date, idx) {
@@ -1918,9 +2113,9 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
             document.createTextNode(formatDateShort(date)),
             idx === 0 ? h('span', { class: 'tag' }, document.createTextNode('最新')) : null
           ),
-          h('td', { 'data-label': '实际市值', class: 'num' },
+          h('td', { 'data-label': '实际金额', class: 'num' },
             document.createTextNode(formatMoney(app.state.checkIns[date])),
-            overlap ? h('span', { class: 'muted small note', style: 'margin-left:8px', title: '该日已有投入记录；核对值作为当日最终余额，记录仍计入累计投入。' }, document.createTextNode('同日有投入记录')) : null
+            overlap ? h('span', { class: 'muted small note', style: 'margin-left:8px', title: '该日已有记账；真实余额作为当日最终金额，记账仍计入累计投入。' }, document.createTextNode('同日有记账')) : null
           ),
           h('td', { 'data-label': '操作', style: 'text-align:right' },
             h('button', {
@@ -1936,7 +2131,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       });
       list.appendChild(h('div', { class: 'table-scroll' },
         h('table', { class: 'data-table' },
-          h('thead', null, h('tr', null, h('th', { text: '日期' }), h('th', { text: '实际市值', class: 'num' }), h('th', { text: '操作', style: 'text-align:right' }))),
+          h('thead', null, h('tr', null, h('th', { text: '日期' }), h('th', { text: '实际金额', class: 'num' }), h('th', { text: '操作', style: 'text-align:right' }))),
           ct
         )
       ));
@@ -2224,7 +2419,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     if (!Number.isFinite(required) || required <= 0) return;
     confirmDialog({
       title: '设为储蓄目标',
-      body: '将目标金额改为财务自由本金 ' + formatMoney(required) + '？现有投入记录、市值核对和方案都会保留。',
+      body: '将目标金额改为财务自由本金 ' + formatMoney(required) + '？现有记账、真实余额和方案都会保留。',
       confirmLabel: '设为目标'
     }).then(function (ok) {
       if (!ok) return;
@@ -2237,7 +2432,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
   function renderSettings() {
     var g = app.state.goal;
     if (!g) return;
-    var dl = $('#settings-goal-summary');
+    var dl = $('#more-goal-summary');
     dl.textContent = '';
     function row(label, value) {
       dl.appendChild(h('div', null, h('dt', { text: label }), h('dd', { text: value })));
@@ -2247,7 +2442,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     row('开始日期', formatDateCN(g.startDate));
     row('每日投入', formatMoney(g.plannedDaily));
     row('年化收益率', formatRateDecimal(g.annualRate));
-    $('#about-schema').textContent = '数据结构版本 schemaVersion ' + SCHEMA_VERSION + ' · 数据仅保存在本浏览器 localStorage 中。';
+    renderAbout();
   }
 
   var THEME_ICON_MOON = '<path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>';
@@ -2383,6 +2578,11 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     return ok;
   }
 
+  function setCodeStatus(msg) {
+    var el = $('#code-status-more');
+    if (el) el.textContent = msg || '';
+  }
+
   function copyBackupCode() {
     if (!app.state.goal) {
       showMessageDialog('暂无数据', '还没有创建储蓄目标，没有可备份的内容。');
@@ -2392,8 +2592,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     copyText(code).then(function (ok) {
       if (ok) {
         toast('备份码已复制，可粘贴到微信或备忘录');
-        var el = $('#code-status');
-        if (el) el.textContent = '已复制，共 ' + code.length + ' 个字符。';
+        setCodeStatus('已复制，共 ' + code.length + ' 个字符。');
       } else {
         showMessageDialog('复制失败', '请手动选择并复制：\n\n' + code);
       }
@@ -2426,7 +2625,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     var s = res.state;
     var summary = s.goal
       ? '目标金额 ' + formatMoney(s.goal.targetAmount) + '，开始于 ' + formatDateCN(s.goal.startDate) + '。\n包含 ' +
-        Object.keys(s.records).length + ' 条投入记录、' + Object.keys(s.checkIns).length + ' 条市值核对、' + s.plans.length + ' 个方案。\n\n' +
+        Object.keys(s.records).length + ' 条记账、' + Object.keys(s.checkIns).length + ' 条真实余额、' + s.plans.length + ' 个方案。\n\n' +
         '恢复将覆盖当前全部数据，且无法撤销。'
       : '备份码中没有目标数据，恢复后将回到创建目标页面。\n\n恢复将覆盖当前全部数据，且无法撤销。';
     confirmDialog({
@@ -2463,7 +2662,16 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     $('#g-daily').value = g ? String(g.plannedDaily) : '';
     $('#g-rate').value = g ? trimNumber(g.annualRate * 100, 4) : '';
     showFormError('#g-error', '');
+    setGoalAdvanced(edit);
     openWithFocus($('#dlg-goal'), '#g-target');
+  }
+
+  function setGoalAdvanced(on) {
+    app.ui.goalAdvanced = !!on;
+    $('#goal-advanced').hidden = !on;
+    var btn = $('#btn-goal-advanced');
+    btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    btn.textContent = on ? '收起高级选项' : '高级选项';
   }
 
   function handleGoalSubmit(e) {
@@ -2472,14 +2680,16 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     var principal = parseAmount($('#g-principal').value);
     var start = $('#g-start').value;
     var daily = parseAmount($('#g-daily').value);
-    var rate = parseRate($('#g-rate').value);
+    var rateRaw = $('#g-rate').value.trim();
+    // 折叠状态下年化收益率为空，用默认值；展开后留空则按 0 处理（用户明确要求不假设收益）
+    var rate = rateRaw === '' ? (app.ui.goalAdvanced ? 0 : DEFAULT_ANNUAL_RATE) : parseRate(rateRaw);
     var errors = [];
     if (!(target > 0)) errors.push('目标金额必须大于 0。');
     if (!(principal >= 0)) errors.push('当前本金不能为负数。');
+    if (!(daily >= 0)) errors.push('每日投入不能为负数。');
     if (!isValidDateKey(start)) errors.push('请选择有效的开始日期。');
     else if (start > app.today) errors.push('开始日期不能晚于今天。');
     else if (start < '1900-01-01') errors.push('开始日期不能早于 1900 年。');
-    if (!(daily >= 0)) errors.push('每日投入不能为负数。');
     if (!(rate > -1)) errors.push('年化收益率必须大于 -100%。');
     if (errors.length) { showFormError('#g-error', errors[0]); return; }
 
@@ -2513,7 +2723,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       if (outRec.length || outChk.length) {
         confirmDialog({
           title: '裁剪旧数据',
-          body: '开始日期已后移。有 ' + outRec.length + ' 条投入记录和 ' + outChk.length + ' 条市值核对早于新的开始日期。继续保存将删除这些条目，且无法撤销。',
+          body: '开始日期已后移。有 ' + outRec.length + ' 条记账和 ' + outChk.length + ' 条真实余额早于新的开始日期。继续保存将删除这些条目，且无法撤销。',
           confirmLabel: '删除并保存',
           danger: true
         }).then(function (ok) {
@@ -2533,7 +2743,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     opts = opts || {};
     var editDate = opts.editDate || null;
     app.ui.editingRecordDate = editDate;
-    $('#dlg-record-title').textContent = editDate ? '编辑投入记录' : (opts.backfill ? '补记投入' : '记录投入');
+    $('#dlg-record-title').textContent = editDate ? '编辑记账' : (opts.backfill ? '补记' : '记一笔');
     var dateInput = $('#r-date');
     dateInput.value = editDate || opts.date || app.today;
     dateInput.min = app.state.goal.startDate;
@@ -2553,27 +2763,27 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     else if (date > app.today) error = '日期不能晚于今天。';
     else if (!(amount > 0)) error = '投入金额需大于 0。';
     var editing = app.ui.editingRecordDate;
-    if (!error && has(app.state.records, date) && date !== editing) error = '该日期已有投入记录，请直接编辑该记录。';
+    if (!error && has(app.state.records, date) && date !== editing) error = '该日期已有记账，请直接编辑。';
     if (error) { showFormError('#r-error', error); return; }
 
     if (editing && date !== editing) delete app.state.records[editing];
     app.state.records[date] = round2(amount);
     closeDialog($('#dlg-record'));
     commit();
-    toast(editing ? '记录已更新' : '已记录 ' + formatMoney(round2(amount)));
+    toast(editing ? '记账已更新' : '已记 ' + formatMoney(round2(amount)));
   }
 
   function deleteRecord(date) {
     confirmDialog({
-      title: '删除投入记录',
-      body: '确定删除 ' + formatDateCN(date) + ' 的投入记录 ' + formatMoney(app.state.records[date]) + '？',
+      title: '删除记账',
+      body: '确定删除 ' + formatDateCN(date) + ' 的记账 ' + formatMoney(app.state.records[date]) + '？',
       confirmLabel: '删除',
       danger: true
     }).then(function (ok) {
       if (!ok) return;
       delete app.state.records[date];
       commit();
-      toast('记录已删除');
+      toast('记账已删除');
     });
   }
 
@@ -2583,14 +2793,14 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     var node = $('#c-overlap');
     var overlap = isValidDateKey(date) && has(app.state.records, date);
     node.hidden = !overlap;
-    node.textContent = overlap ? '该日已有投入记录；市值核对将作为当日最终余额，投入记录仍计入累计投入。' : '';
+    node.textContent = overlap ? '该日已有记账；真实余额将作为当日最终金额，记账仍计入累计投入。' : '';
   }
 
   function openCheckInDialog(opts) {
     opts = opts || {};
     var editDate = opts.editDate || null;
     app.ui.editingCheckInDate = editDate;
-    $('#dlg-checkin-title').textContent = editDate ? '编辑市值核对' : '市值核对';
+    $('#dlg-checkin-title').textContent = editDate ? '编辑真实余额' : '填真实余额';
     var dateInput = $('#c-date');
     dateInput.value = editDate || opts.date || app.today;
     dateInput.min = app.state.goal.startDate;
@@ -2609,29 +2819,29 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     if (!isValidDateKey(date)) error = '请选择有效日期。';
     else if (date < app.state.goal.startDate) error = '日期不能早于开始日期。';
     else if (date > app.today) error = '日期不能晚于今天。';
-    else if (!(value >= 0)) error = '实际市值不能为负数。';
+    else if (!(value >= 0)) error = '实际金额不能为负数。';
     var editing = app.ui.editingCheckInDate;
-    if (!error && has(app.state.checkIns, date) && date !== editing) error = '该日期已有市值核对，请直接编辑该条记录。';
+    if (!error && has(app.state.checkIns, date) && date !== editing) error = '该日期已有真实余额，请直接编辑该条。';
     if (error) { showFormError('#c-error', error); return; }
 
     if (editing && date !== editing) delete app.state.checkIns[editing];
     app.state.checkIns[date] = round2(value);
     closeDialog($('#dlg-checkin'));
     commit();
-    toast(editing ? '市值核对已更新' : '已记录市值核对');
+    toast(editing ? '真实余额已更新' : '已记录真实余额');
   }
 
   function deleteCheckIn(date) {
     confirmDialog({
-      title: '删除市值核对',
-      body: '确定删除 ' + formatDateCN(date) + ' 的市值核对 ' + formatMoney(app.state.checkIns[date]) + '？删除后将以更早的核对（或模型推算）为准。',
+      title: '删除真实余额',
+      body: '确定删除 ' + formatDateCN(date) + ' 的真实余额 ' + formatMoney(app.state.checkIns[date]) + '？删除后将以更早的真实余额（或模型推算）为准。',
       confirmLabel: '删除',
       danger: true
     }).then(function (ok) {
       if (!ok) return;
       delete app.state.checkIns[date];
       commit();
-      toast('市值核对已删除');
+      toast('真实余额已删除');
     });
   }
 
@@ -2729,10 +2939,16 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
   function toggleTheme() {
     applyTheme(app.state.settings.theme === 'dark' ? 'light' : 'dark');
     persist(app.state);
+    redrawCharts();
+  }
+
+  function redrawCharts() {
     var model = app.chartModels.main;
     var compare = app.chartModels.compare;
     if (app.activeTab === 'dashboard' && model) renderChart($('#chart-main'), model);
-    if (app.activeTab === 'compare' && compare) renderChart($('#chart-compare'), compare);
+    if ($('#panel-compare') && !$('#panel-compare').hidden && compare) {
+      renderChart($('#chart-compare'), compare);
+    }
   }
 
   /* ----- export / import / clear ----- */
@@ -2775,7 +2991,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       var s = res.state;
       var summary = s.goal
         ? '目标金额 ' + formatMoney(s.goal.targetAmount) + '，开始于 ' + formatDateCN(s.goal.startDate) + '。\n包含 ' +
-          Object.keys(s.records).length + ' 条投入记录、' + Object.keys(s.checkIns).length + ' 条市值核对、' + s.plans.length + ' 个方案。\n\n' +
+          Object.keys(s.records).length + ' 条记账、' + Object.keys(s.checkIns).length + ' 条真实余额、' + s.plans.length + ' 个方案。\n\n' +
           '导入将覆盖当前全部数据，且无法撤销。建议先导出当前备份。'
         : '备份中没有目标数据，导入后将回到创建目标页面。\n\n导入将覆盖当前全部数据，且无法撤销。';
       confirmDialog({
@@ -2802,7 +3018,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
   function clearAllData() {
     confirmDialog({
       title: '清空全部数据',
-      body: '将删除目标、全部投入记录、市值核对和方案。此操作无法撤销。建议先导出备份。',
+      body: '将删除目标、全部记账、真实余额和方案。此操作无法撤销。建议先导出备份。',
       confirmLabel: '清空数据',
       danger: true
     }).then(function (ok) {
@@ -2822,6 +3038,9 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
    * ============================================================ */
   function switchTab(tab) {
     app.activeTab = tab;
+    // 切到别的 tab 时重置「更多」的子页状态，否则借用的面板会留在 #app-shell 里
+    // 把「更多」整页顶到下面去
+    if (tab !== 'more') app.ui.moreSection = null;
     render();
   }
 
@@ -2841,9 +3060,15 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     });
 
     $('#btn-theme').addEventListener('click', toggleTheme);
-    $('#btn-theme-2').addEventListener('click', toggleTheme);
     $('#btn-create-goal').addEventListener('click', function () { openGoalDialog({ edit: false }); });
-    $('#btn-edit-goal').addEventListener('click', function () { openGoalDialog({ edit: true }); });
+
+    $('#btn-more-back').addEventListener('click', backFromMoreSection);
+    $$('[data-more]').forEach(function (btn) {
+      btn.addEventListener('click', function () { openMoreSection(btn.getAttribute('data-more')); });
+    });
+    $('#btn-goal-advanced').addEventListener('click', function () {
+      setGoalAdvanced(!app.ui.goalAdvanced);
+    });
     $('#btn-record-today').addEventListener('click', function () {
       if (has(app.state.records, app.today)) openRecordDialog({ editDate: app.today });
       else openRecordDialog({ date: app.today });
@@ -2854,21 +3079,20 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
       if (has(app.state.checkIns, app.today)) openCheckInDialog({ editDate: app.today });
       else openCheckInDialog({ date: app.today });
     });
-    $('#btn-add-checkin').addEventListener('click', function () { openCheckInDialog({ date: app.today }); });
     $('#btn-add-plan').addEventListener('click', function () { openPlanDialog({}); });
-    $('#btn-export').addEventListener('click', exportBackup);
-    $('#btn-import').addEventListener('click', function () { $('#file-import').click(); });
-    $('#btn-import-onboarding').addEventListener('click', function () { $('#file-import').click(); });
-    $('#btn-clear').addEventListener('click', clearAllData);
-    $('#btn-copy-code').addEventListener('click', copyBackupCode);
-    $('#btn-restore-code').addEventListener('click', openCodeDialog);
-    $('#code-ok').addEventListener('click', handleCodeRestore);
-
-    $('#file-import').addEventListener('change', function (e) {
+    // 导入用的隐藏 file input 在「更多 → 备份与恢复」面板里按需创建，用事件委托绑定
+    document.addEventListener('change', function (e) {
+      if (!e.target || e.target.id !== 'file-import') return;
       var file = e.target.files && e.target.files[0];
       e.target.value = '';
       importFromFile(file);
     });
+    document.addEventListener('click', function (e) {
+      if (!e.target || !e.target.closest) return;
+      var trigger = e.target.closest('[data-import-trigger]');
+      if (trigger) { var input = $('#file-import'); if (input) input.click(); }
+    });
+    $('#code-ok').addEventListener('click', handleCodeRestore);
 
     $('#form-goal').addEventListener('submit', handleGoalSubmit);
     $('#form-record').addEventListener('submit', handleRecordSubmit);
@@ -2905,10 +3129,7 @@ dialog h2 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
     window.addEventListener('focus', checkDayRollover);
     window.addEventListener('resize', function () {
       clearTimeout(window._chartResizeT);
-      window._chartResizeT = setTimeout(function () {
-        if (app.activeTab === 'dashboard' && app.chartModels.main) renderChart($('#chart-main'), app.chartModels.main);
-        if (app.activeTab === 'compare' && app.chartModels.compare) renderChart($('#chart-compare'), app.chartModels.compare);
-      }, 120);
+      window._chartResizeT = setTimeout(redrawCharts, 120);
     });
   }
 
